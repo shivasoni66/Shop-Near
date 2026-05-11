@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-const connectDB = require('./config/db');
 require('dotenv').config();
 
 const app = express();
@@ -25,7 +24,9 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection
-connectDB();
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('Could not connect to MongoDB', err));
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -35,7 +36,6 @@ const liveRoutes = require('./routes/live');
 const reelRoutes = require('./routes/reels');
 const chatRoutes = require('./routes/chat');
 const profileRoutes = require('./routes/profile');
-const sellerRoutes = require('./routes/sellers');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -44,7 +44,6 @@ app.use('/api/live', liveRoutes);
 app.use('/api/reels', reelRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/sellers', sellerRoutes);
 
 // Socket.IO Logic
 io.on('connection', (socket) => {

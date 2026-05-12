@@ -8,8 +8,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/repository_providers.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/constants/api_endpoints.dart';
-import 'package:flutter/foundation.dart';
-
 
 class ReelsScreen extends ConsumerStatefulWidget {
   final String? emoji;
@@ -144,6 +142,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
         
         // Dark Overlay at Bottom
         Positioned.fill(
+          child: ReelVideoPlayer(videoUrl: reel.videoUrl, emoji: reel.emoji, isActive: isActive),
+        ),
+        Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -262,6 +263,33 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
                     ),
                   ),
                 ],
+            ],
+          ),
+        ),
+        Positioned(
+          right: 16,
+          bottom: 24,
+          child: Column(
+            children: [
+              _buildReelAction(
+                icon: Icons.favorite, 
+                label: reel.likes.toString(), 
+                col: Colors.redAccent,
+                onTap: () => ref.read(reelRepositoryProvider).likeReel(reel.id),
+              ),
+              const SizedBox(height: 20),
+              _buildReelAction(
+                icon: Icons.chat_bubble, 
+                label: reel.comments.toString(), 
+                col: Colors.white,
+                onTap: () => _showComments(context, reel.id),
+              ),
+              const SizedBox(height: 20),
+              _buildReelAction(
+                icon: Icons.share, 
+                label: 'Share', 
+                col: Colors.white,
+                onTap: () {},
               ),
             ],
           ),
@@ -358,6 +386,7 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
   }
 
   Future<void> _initMobilePlayer() async {
+  Future<void> _initPlayer() async {
     final url = _resolvedUrl;
     if (url.isEmpty) {
       setState(() => _error = true);
@@ -413,7 +442,7 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
           _controller!.play();
         }
       },
-      child: SizedBox.expand(
+      child: Center(
         child: FittedBox(
           fit: BoxFit.cover,
           child: SizedBox(

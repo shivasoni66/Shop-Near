@@ -10,6 +10,8 @@ import 'package:shop_near/shared/providers/repository_providers.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/providers/reel_providers.dart';
 
 class PostReelScreen extends ConsumerStatefulWidget {
   const PostReelScreen({super.key});

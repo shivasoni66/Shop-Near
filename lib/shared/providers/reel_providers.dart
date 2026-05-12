@@ -53,6 +53,19 @@ class ReelsNotifier extends StateNotifier<AsyncValue<List<Reel>>> {
         // Silently ignore
       }
     });
+
+    socket.on('reel_deleted', (data) {
+      if (!mounted) return;
+      try {
+        final deletedId = data as String;
+        state.whenData((current) {
+          final updatedList = current.where((reel) => reel.id != deletedId).toList();
+          state = AsyncValue.data(updatedList);
+        });
+      } catch (_) {
+        // Silently ignore
+      }
+    });
   }
 
   /// Call this to force a fresh fetch (e.g. pull-to-refresh).
@@ -75,3 +88,9 @@ final reelsProvider =
     StateNotifierProvider<ReelsNotifier, AsyncValue<List<Reel>>>(
   (ref) => ReelsNotifier(ref),
 );
+
+// Provider to fetch only the logged-in seller's reels
+final sellerReelsProvider = FutureProvider.autoDispose<List<Reel>>((ref) async {
+  final repository = ref.watch(reelRepositoryProvider);
+  return await repository.getMyReels();
+});

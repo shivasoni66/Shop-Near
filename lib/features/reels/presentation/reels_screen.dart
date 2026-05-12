@@ -30,7 +30,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
   }
 
   Future<void> _refresh() async {
-    await ref.refresh(reelsProvider.future);
+    await ref.read(reelsProvider.notifier).refresh();
   }
 
   void _showComments(BuildContext context, String reelId) {

@@ -13,8 +13,14 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'shop-near',
+<<<<<<< HEAD
     resource_type: 'auto',
     allowed_formats: ['jpg', 'png', 'jpeg', 'mp4', 'mov', 'avi', 'mkv', 'webm']
+=======
+    resource_type: 'auto', // This allows both images and videos
+    allowed_formats: ['jpg', 'png', 'mp4', 'mov', 'avi', 'mkv', 'webm'],
+    transformation: [{ quality: 'auto' }]
+>>>>>>> cdcbe53 (Fix backend crash, improve UI aesthetics, and resolve login/reels screen issues)
   }
 });
 

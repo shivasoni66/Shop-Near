@@ -88,14 +88,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 Positioned(
                   top: 14, right: 14,
                   child: SafeArea(
-                    child: GestureDetector(
-                      onTap: () => context.push('/home/settings'),
-                      child: Container(
-                        width: 38, height: 38,
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.settings_outlined, color: Colors.white, size: 18),
-                      ),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => context.push('/home/settings'),
+                          child: Container(
+                            width: 38, height: 38,
+                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.settings_outlined, color: Colors.white, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _showLogoutDialog,
+                          child: Container(
+                            width: 38, height: 38,
+                            decoration: BoxDecoration(color: Colors.red.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -415,6 +429,76 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         ),
         alignment: Alignment.center,
         child: Text(emoji, style: const TextStyle(fontSize: 34)),
+      ),
+    );
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10))
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.logout_rounded, color: Colors.red, size: 32),
+              ),
+              const SizedBox(height: 20),
+              Text('Logout', style: AppTextStyles.h2.copyWith(fontSize: 22)),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to sign out from Shop-Near?',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text('Cancel', style: AppTextStyles.labelLarge.copyWith(color: AppColors.muted)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context.go('/login');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

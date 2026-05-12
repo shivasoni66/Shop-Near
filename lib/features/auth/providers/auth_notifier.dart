@@ -61,29 +61,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return e.message ?? 'An unknown network error occurred';
   }
 
-  Future<void> login(String email, String password) async {
+  Future<AuthState> login(String email, String password) async {
     state = AuthState.loading();
     try {
       final data = await _ref.read(authRepositoryProvider).login(email, password);
       final user = User.fromMap(data['user']);
       state = AuthState.authenticated(user);
+      return state;
     } on DioException catch (e) {
       state = AuthState.error(_getDioError(e));
+      return state;
     } catch (e) {
       state = AuthState.error(e.toString());
+      return state;
     }
   }
 
-  Future<void> register(Map<String, dynamic> userData) async {
+  Future<AuthState> register(Map<String, dynamic> userData) async {
     state = AuthState.loading();
     try {
       final data = await _ref.read(authRepositoryProvider).register(userData);
       final user = User.fromMap(data['user']);
       state = AuthState.authenticated(user);
+      return state;
     } on DioException catch (e) {
       state = AuthState.error(_getDioError(e));
+      return state;
     } catch (e) {
       state = AuthState.error(e.toString());
+      return state;
     }
   }
 

@@ -32,14 +32,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    await ref.read(authControllerProvider.notifier).register({
+    final authState = await ref.read(authControllerProvider.notifier).register({
       'name': name,
       'email': email,
       'password': password,
       'role': _role,
     });
 
-    final authState = ref.read(authControllerProvider);
     if (authState.status == AuthStatus.error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

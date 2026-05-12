@@ -34,4 +34,15 @@ class LiveSessionRepository {
       rethrow;
     }
   }
+
+  Future<void> endLiveSession(String sessionId) async {
+    try {
+      final response = await _apiClient.put('${ApiEndpoints.live}/$sessionId/end');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to end live session');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

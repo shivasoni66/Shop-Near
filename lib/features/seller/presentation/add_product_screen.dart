@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../product/providers/product_notifier.dart';
+import '../../../shared/providers/product_providers.dart';
+import '../../../shared/providers/seller_providers.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
@@ -22,6 +23,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _descriptionController = TextEditingController();
   final _tagsController = TextEditingController();
   String _category = 'Fashion & Clothing';
+  bool _isPublishing = false;
 
   final List<XFile> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
@@ -62,44 +64,47 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       return;
     }
 
-    final productData = {
-      'name': name,
-      'price': price,
-      if (oldPrice != null) 'oldPrice': oldPrice,
-      'category': _category,
-      'stock': stock,
-      'description': description,
-      'tags': tags,
-    };
+    setState(() => _isPublishing = true);
 
-    final imagePaths = _selectedImages.map((e) => e.path).toList();
+    try {
+      final productData = {
+        'name': name,
+        'price': price,
+        if (oldPrice != null) 'oldPrice': oldPrice,
+        'category': _category,
+        'stock': stock,
+        'description': description,
+        'tags': tags,
+      };
 
-    await ref
-        .read(productControllerProvider.notifier)
-        .createProduct(productData, imagePaths);
+      final imagePaths = _selectedImages.map((e) => e.path).toList();
 
-    final state = ref.read(productControllerProvider);
-    if (state.status == ProductStatus.created) {
+      // Use the unified productsProvider to create the product
+      await ref.read(productsProvider.notifier).createProduct(productData, imagePaths);
+      
+      // Refresh the seller's product list
+      ref.invalidate(sellerProductsProvider);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Product published successfully! 🚀')),
         );
         context.pop();
       }
-    } else if (state.status == ProductStatus.error) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(state.errorMessage ?? 'Failed to publish product')),
+          SnackBar(content: Text('Failed to publish product: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isPublishing = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final productState = ref.watch(productControllerProvider);
-    final isLoading = productState.status == ProductStatus.creating;
+    final isLoading = _isPublishing;
 
     return Scaffold(
       appBar: AppBar(

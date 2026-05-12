@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/seller_providers.dart';
+import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/models/product.dart';
 
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,15 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    
+    // Listen for real-time product updates to refresh the list
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final socketService = ref.read(socketServiceProvider);
+      socketService.on('product_update', (data) {
+        // We could check if the seller ID matches, but invalidating is safer/easier
+        ref.invalidate(sellerProductsProvider);
+      });
+    });
   }
 
   @override
@@ -35,87 +45,91 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(sellerProductsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('My Products', style: AppTextStyles.h3),
-        actions: [
-          IconButton(
-            onPressed: () => context.push('/seller/products/add'),
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(10),
+    return productsAsync.when(
+      data: (products) => Scaffold(
+        appBar: AppBar(
+          title: Text('My Products', style: AppTextStyles.h3),
+          actions: [
+            IconButton(
+              onPressed: () => context.push('/seller/products/add'),
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 20),
               ),
-              child: const Icon(Icons.add, color: Colors.white, size: 20),
             ),
-          ),
-          const SizedBox(width: 8),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(110),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search products...',
-                        hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
-                        prefixIcon: const Icon(Icons.search, color: AppColors.muted),
-                        filled: true,
-                        fillColor: AppColors.card.withOpacity(0.8),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border, width: 1.5),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border, width: 1.5),
+            const SizedBox(width: 8),
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(110),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search products...',
+                          hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
+                          prefixIcon: const Icon(Icons.search, color: AppColors.muted),
+                          filled: true,
+                          fillColor: AppColors.card.withOpacity(0.8),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.border, width: 1.5),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.border, width: 1.5),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                indicatorColor: AppColors.primary,
-                labelColor: AppColors.primary,
-                unselectedLabelColor: AppColors.muted,
-                labelStyle: AppTextStyles.labelMedium,
-                tabs: const [
-                  Tab(text: 'All (12)'),
-                  Tab(text: 'Active (9)'),
-                  Tab(text: 'Draft (2)'),
-                  Tab(text: 'Out of Stock (1)'),
-                ],
-              ),
-            ],
+                TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  indicatorColor: AppColors.primary,
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: AppColors.muted,
+                  labelStyle: AppTextStyles.labelMedium,
+                  tabs: [
+                    Tab(text: 'All (${products.length})'),
+                    Tab(text: 'Active (${products.where((p) => (p.soldCount ?? 0) > 0).length})'),
+                    Tab(text: 'Draft (0)'),
+                    Tab(text: 'Out of Stock (${products.where((p) => (p.soldCount ?? 0) == 0).length})'),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildProductList(products),
+            _buildProductList(products.where((p) => (p.soldCount ?? 0) > 0).toList()), 
+            _buildProductList([]), // Drafts
+            _buildProductList(products.where((p) => (p.soldCount ?? 0) == 0).toList()),
+          ],
+        ),
       ),
-      body: productsAsync.when(
-        data: (products) {
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _buildProductList(products),
-              _buildProductList(products), // In real app, filter these
-              _buildProductList(products),
-              _buildProductList(products),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+      loading: () => Scaffold(
+        appBar: AppBar(title: Text('My Products', style: AppTextStyles.h3)),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, stack) => Scaffold(
+        appBar: AppBar(title: Text('My Products', style: AppTextStyles.h3)),
+        body: Center(child: Text('Error: $err')),
       ),
     );
   }

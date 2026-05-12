@@ -20,7 +20,7 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
     console.log('--- Incoming Product Creation ---');
     console.log('User:', req.user.id);
     console.log('Body data:', req.body);
-    
+
     if (req.user.role !== 'seller') {
       console.log('❌ Denied: User is not a seller');
       return res.status(403).json({ message: 'Only sellers can add products' });
@@ -42,10 +42,14 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
 
     await product.save();
     console.log('✅ Product saved in MongoDB:', product._id);
+    
+    // Emit real-time update
+    req.io.emit('product_update', { action: 'created', product: product });
+    
     res.status(201).json(product);
   } catch (err) {
     console.error('🔥 Server Error during product creation:', err);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to create product',
       error: err.message,
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined

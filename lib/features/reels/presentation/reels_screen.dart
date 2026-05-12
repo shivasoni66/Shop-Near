@@ -8,10 +8,8 @@ import '../../../shared/providers/reel_providers.dart';
 import '../../../shared/models/reel.dart';
 import '../../../shared/providers/repository_providers.dart';
 import 'package:video_player/video_player.dart';
-// Web-only imports
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:ui_web' as ui;
+import '../../../core/constants/api_endpoints.dart';
+// Removed web-only imports to fix mobile build
 
 
 class ReelsScreen extends ConsumerStatefulWidget {
@@ -346,18 +344,15 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
     }
     // Relative path — strip leading slash to avoid double slash
     final rel = videoUrl.startsWith('/') ? videoUrl.substring(1) : videoUrl;
-    return 'http://localhost:5000/$rel';
+    // Use the base URL from ApiEndpoints
+    final baseUrl = ApiEndpoints.baseUrl.replaceAll('/api', '');
+    return '$baseUrl/$rel';
   }
 
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) {
-      _viewId = 'reel-video-${widget.videoUrl.hashCode}-${DateTime.now().millisecondsSinceEpoch}';
-      _registerWebVideo();
-    } else {
-      _initMobilePlayer();
-    }
+    _initMobilePlayer();
   }
 
   @override
@@ -463,6 +458,8 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
     }
 
     if (!kIsWeb && (!_initialized || _controller == null)) {
+
+    if (!_initialized || _controller == null) {
       return const Center(child: CircularProgressIndicator(color: Colors.white));
     }
 

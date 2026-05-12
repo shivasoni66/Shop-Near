@@ -21,6 +21,18 @@ class ProductRepository {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getAllCategories() async {
+    try {
+      final response = await _apiClient.get(ApiEndpoints.categories);
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      throw Exception('Failed to load categories');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Product> getProductById(String id) async {
     try {
       final response = await _apiClient.get('${ApiEndpoints.products}/$id');
@@ -28,6 +40,32 @@ class ProductRepository {
         return Product.fromMap(response.data);
       }
       throw Exception('Failed to load product');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<Product>> getProductsByCategory(String category) async {
+    try {
+      final response = await _apiClient.get('${ApiEndpoints.categoryProducts}/$category');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((item) => Product.fromMap(item)).toList();
+      }
+      throw Exception('Failed to load category products');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<Product>> searchProducts(String query) async {
+    try {
+      final response = await _apiClient.get(ApiEndpoints.searchProducts, queryParameters: {'q': query});
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((item) => Product.fromMap(item)).toList();
+      }
+      throw Exception('Failed to search products');
     } catch (e) {
       rethrow;
     }

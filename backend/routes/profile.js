@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
+const { upload } = require('../config/cloudinary');
 
 // Get current user profile
 router.get('/', auth, async (req, res) => {
@@ -27,20 +28,48 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update profile (name, handle, bio, location, phone, avatar)
-router.put('/', auth, async (req, res) => {
+router.put('/', auth, upload.single('avatar'), async (req, res) => {
   try {
-    const allowedFields = ['name', 'handle', 'location', 'bio', 'phone', 'avatar'];
+    console.log('--- Profile Update Request ---');
+    console.log('User ID:', req.user.id);
+    console.log('Body:', req.body);
+    console.log('File:', req.file ? req.file.path : 'No file');
+
+    const allowedFields = ['name', 'handle', 'location', 'bio', 'phone'];
     const updates = {};
     for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
+      if (req.body[field] !== undefined && req.body[field] !== '') {
         updates[field] = req.body[field];
       }
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
+    if (req.file) {
+      updates.avatar = req.file.path;
+    } else if (req.body.avatar !== undefined && req.body.avatar !== '') {
+      updates.avatar = req.body.avatar;
+    }
+
+    console.log('Updates to apply:', updates);
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true, runValidators: true }).select('-password');
+    if (!user) {
+      console.log('❌ User not found during update');
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('✅ Profile updated successfully');
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('🔥 Error updating profile:', err);
+    res.status(500).json({ 
+      message: 'Failed to update profile', 
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 });
 

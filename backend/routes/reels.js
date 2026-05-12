@@ -42,6 +42,10 @@ router.post('/', auth, upload.single('video'), async (req, res) => {
       req.io.emit('new_reel', reel);
     }
 
+    
+    // Emit real-time update
+    req.io.emit('reel_update', { action: 'created', reel: reel });
+    
     res.status(201).json(reel);
   } catch (err) {
     console.error('Reel upload error:', err);

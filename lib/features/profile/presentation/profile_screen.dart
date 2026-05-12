@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/profile_provider.dart';
+import '../../auth/providers/auth_notifier.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -38,13 +38,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(profileProvider);
+    final authState = ref.watch(authControllerProvider);
+    final user = authState.user;
 
-    int points = 1500;
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text('Please login to view profile')));
+    }
+
+    int points = user.points;
     String tier = points >= 1500 ? 'Gold' : (points >= 500 ? 'Silver' : 'Bronze');
     Color tierColor = points >= 1500
         ? const Color(0xFFFFD700)
         : (points >= 500 ? const Color(0xFFE0E0E0) : const Color(0xFFCD7F32));
+    int nextTierThreshold = points >= 1500 ? points : (points >= 500 ? 1500 : 500);
+    double progress = points / nextTierThreshold;
+    if (progress > 1.0) progress = 1.0;
+
     int nextTierPts = points >= 1500 ? 0 : (points >= 500 ? 1500 - points : 500 - points);
     String nextTierName = points >= 1500 ? 'None' : (points >= 500 ? 'Gold' : 'Silver');
     String tierMsg = points >= 1500
@@ -113,7 +122,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             boxShadow: [BoxShadow(color: const Color(0xFFf093fb).withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 8))],
                           ),
                           alignment: Alignment.center,
-                          child: Text(profile.avatar, style: const TextStyle(fontSize: 44)),
+                          child: user.avatar.startsWith('http') 
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(45),
+                                  child: Image.network(user.avatar, width: 90, height: 90, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Text('😊', style: TextStyle(fontSize: 44)),
+                                  ),
+                                )
+                              : Text(user.avatar.isEmpty ? '😊' : user.avatar, style: const TextStyle(fontSize: 44)),
                         ),
                       ),
                     ),
@@ -127,17 +143,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 child: Column(
                   children: [
                     const SizedBox(height: 6),
-                    Text(profile.name,
+                    Text(user.name,
                         style: AppTextStyles.h2.copyWith(fontSize: 21, fontWeight: FontWeight.w900, color: AppColors.text)),
                     const SizedBox(height: 3),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(color: AppColors.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                      child: Text('@${profile.username} · ${profile.location}',
+                      child: Text('@${user.handle.isEmpty ? user.name.toLowerCase().replaceAll(' ', '_') : user.handle} · ${user.location.isEmpty ? 'Set Location' : user.location}',
                           style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondary, fontSize: 11, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(height: 10),
-                    Text(profile.bio, textAlign: TextAlign.center,
+                    Text(user.bio.isEmpty ? 'No bio yet. Tap Edit Profile to add one!' : user.bio, textAlign: TextAlign.center,
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.text, fontSize: 13, height: 1.5)),
                     const SizedBox(height: 16),
                     Container(
@@ -150,11 +166,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildStat('47', 'Orders', 1),
+                          _buildStat(user.ordersCount.toString(), 'Orders', 1),
                           _buildDivider(),
-                          _buildStat('128', 'Following', null),
+                          _buildStat(user.followingCount.toString(), 'Following', null),
                           _buildDivider(),
-                          _buildStat('34', 'Reviews', 2),
+                          _buildStat(user.reviewsCount.toString(), 'Reviews', 2),
                         ],
                       ),
                     ),
@@ -226,7 +242,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     const SizedBox(height: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(value: 0.82, backgroundColor: Colors.white.withOpacity(0.25), valueColor: const AlwaysStoppedAnimation<Color>(Colors.white), minHeight: 7),
+                      child: LinearProgressIndicator(value: progress, backgroundColor: Colors.white.withOpacity(0.25), valueColor: const AlwaysStoppedAnimation<Color>(Colors.white), minHeight: 7),
                     ),
                   ],
                 ),

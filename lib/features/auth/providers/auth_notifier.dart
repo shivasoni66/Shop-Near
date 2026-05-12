@@ -91,6 +91,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _ref.read(authRepositoryProvider).logout();
     state = AuthState.unauthenticated();
   }
+
+  Future<void> updateProfile(Map<String, dynamic> data, {String? imagePath}) async {
+    // Keep current state but show loading if needed, or just let the repository handle it
+    try {
+      final updatedUser = await _ref.read(userRepositoryProvider).updateProfile(data, imagePath: imagePath);
+      state = AuthState.authenticated(updatedUser);
+    } on DioException catch (e) {
+      // Maybe handle error differently here so we don't log them out
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
 
 final authControllerProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

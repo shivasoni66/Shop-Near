@@ -2,10 +2,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
-const { Server } = require('socket.io');
 const path = require('path');
+const { Server } = require('socket.io');
 const connectDB = require('./config/db');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -29,7 +29,8 @@ app.use(cors({
   exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Type'],
 }));
 app.use(express.json());
-// Serve uploaded files with proper CORS headers for video streaming
+
+// Serve uploaded files
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -77,7 +78,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('order_update', (data) => {
-    // Notify specific user or seller
     io.emit('order_notification', data);
   });
 
@@ -93,10 +93,12 @@ app.get('/', (req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err);
-  res.status(500).json({ 
-    message: err.message || 'Internal Server Error',
-    error: err
+  console.error('🔥 Global Error Handler:', err);
+  res.status(500).json({
+    message: err.message || 'An internal server error occurred',
+    error: err.name || 'Error',
+    details: err.errors || err,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shop_near/features/auth/providers/auth_notifier.dart';
 import '../../../shared/providers/product_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -25,7 +26,13 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _selectedCategory = 'All';
   final List<String> _categories = [
-    'All', 'Fashion', 'Food', 'Electronics', 'Handicraft', 'Grocery', 'Jewellery'
+    'All',
+    'Fashion',
+    'Food',
+    'Electronics',
+    'Handicraft',
+    'Grocery',
+    'Jewellery'
   ];
 
   @override
@@ -33,8 +40,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     // Connect socket and listen for live updates
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(authControllerProvider).user;
       final socketService = ref.read(socketServiceProvider);
       socketService.connect();
+
+      if (user != null) {
+        socketService.emit('identify', user.id);
+      }
+
       socketService.on('live_update', (data) {
         // When a seller starts or stops a live, refresh our list
         ref.invalidate(liveSessionsProvider);
@@ -45,12 +58,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsProvider);
+    final categoriesAsync = ref.watch(categoriesProvider);
     final isLoading = productsAsync.isLoading;
 
     return Scaffold(
       appBar: _buildAppBar(context),
       body: RefreshIndicator(
-        onRefresh: () => ref.refresh(productsProvider.future),
+        onRefresh: () async {
+          await ref.read(productsProvider.notifier).fetchAll();
+          ref.invalidate(categoriesProvider);
+        },
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,13 +81,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onActionTap: () => context.push('/home/live'),
               ),
               isLoading ? _buildLiveShimmer() : const LiveCardsRowWidget(),
-              ChipFilterRow(
-                items: _categories,
-                selectedItem: _selectedCategory,
-                onSelected: (val) => setState(() => _selectedCategory = val),
+              
+              categoriesAsync.when(
+                data: (categories) {
+                  final catNames = ['All', ...categories.map((c) => c['name'] as String)];
+                  return ChipFilterRow(
+                    items: catNames,
+                    selectedItem: _selectedCategory,
+                    onSelected: (val) => setState(() => _selectedCategory = val),
+                  );
+                },
+                loading: () => const Center(child: LinearProgressIndicator()),
+                error: (_, __) => ChipFilterRow(
+                  items: const ['All', 'Fashion', 'Food', 'Electronics'],
+                  selectedItem: _selectedCategory,
+                  onSelected: (val) => setState(() => _selectedCategory = val),
+                ),
               ),
-              const SectionHeader(title: '✨ Trending Near You', actionText: 'See all'),
-              isLoading ? _buildGridShimmer() : ProductGridWidget(category: _selectedCategory),
+              
+              const SectionHeader(
+                  title: '✨ Trending Near You', actionText: 'See all'),
+              isLoading
+                  ? _buildGridShimmer()
+                  : ProductGridWidget(category: _selectedCategory),
               const SectionHeader(title: '📱 Community Feed'),
               isLoading ? _buildPostShimmer() : const CommunityPostCard(),
               const SizedBox(height: 10),
@@ -88,7 +121,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: 5,
-        itemBuilder: (context, index) => const ShimmerPlaceholder(width: 70, height: 70, borderRadius: 35, margin: EdgeInsets.only(right: 12)),
+        itemBuilder: (context, index) => const ShimmerPlaceholder(
+            width: 70,
+            height: 70,
+            borderRadius: 35,
+            margin: EdgeInsets.only(right: 12)),
       ),
     );
   }
@@ -100,7 +137,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: 3,
-        itemBuilder: (context, index) => const ShimmerPlaceholder(width: 140, height: 180, borderRadius: 20, margin: EdgeInsets.only(right: 12)),
+        itemBuilder: (context, index) => const ShimmerPlaceholder(
+            width: 140,
+            height: 180,
+            borderRadius: 20,
+            margin: EdgeInsets.only(right: 12)),
       ),
     );
   }
@@ -111,9 +152,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.75),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.75),
         itemCount: 4,
-        itemBuilder: (context, index) => const ShimmerPlaceholder(width: double.infinity, height: double.infinity, borderRadius: 16),
+        itemBuilder: (context, index) => const ShimmerPlaceholder(
+            width: double.infinity, height: double.infinity, borderRadius: 16),
       ),
     );
   }
@@ -121,7 +167,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildPostShimmer() {
     return const Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
-      child: ShimmerPlaceholder(width: double.infinity, height: 200, borderRadius: 20),
+      child: ShimmerPlaceholder(
+          width: double.infinity, height: 200, borderRadius: 20),
     );
   }
 
@@ -134,9 +181,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           RichText(
             text: TextSpan(
               text: 'Shop',
-              style: AppTextStyles.h2.copyWith(color: AppColors.text, fontSize: 22),
+              style: AppTextStyles.h2
+                  .copyWith(color: AppColors.text, fontSize: 22),
               children: const [
-                TextSpan(text: 'Near', style: TextStyle(color: AppColors.primary)),
+                TextSpan(
+                    text: 'Near', style: TextStyle(color: AppColors.primary)),
               ],
             ),
           ),
@@ -146,16 +195,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(width: 4),
               Text(
                 'Indore, Madhya Pradesh',
-                style: AppTextStyles.labelSmall.copyWith(color: AppColors.muted),
+                style:
+                    AppTextStyles.labelSmall.copyWith(color: AppColors.muted),
               ),
             ],
           ),
         ],
       ),
       actions: [
-        _buildIconBtn(Icons.notifications_none, true, () => context.push('/home/notifications')),
+        _buildIconBtn(Icons.notifications_none, true,
+            () => context.push('/home/notifications')),
         const SizedBox(width: 8),
-        _buildIconBtn(Icons.shopping_cart_outlined, false, () => context.push('/home/cart')),
+        _buildIconBtn(Icons.shopping_cart_outlined, false,
+            () => context.push('/home/cart')),
         const SizedBox(width: 16),
       ],
     );
@@ -210,7 +262,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                border: Border.all(
+                    color: Colors.white.withOpacity(0.5), width: 1.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -222,7 +275,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
+                  const Icon(Icons.search_rounded,
+                      color: AppColors.primary, size: 20),
                   const SizedBox(width: 12),
                   Text(
                     'Search for your favorites...',
@@ -233,7 +287,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.mic_none_rounded, color: AppColors.muted.withOpacity(0.5), size: 20),
+                  Icon(Icons.mic_none_rounded,
+                      color: AppColors.muted.withOpacity(0.5), size: 20),
                 ],
               ),
             ),
@@ -243,5 +298,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
-
-

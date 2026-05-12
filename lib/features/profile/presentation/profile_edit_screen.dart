@@ -8,6 +8,8 @@ import '../../../shared/providers/repository_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
+import '../../auth/providers/auth_notifier.dart';
+
 class ProfileEditScreen extends ConsumerStatefulWidget {
   const ProfileEditScreen({super.key});
 
@@ -27,12 +29,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = ref.read(userProfileProvider).value;
+      final user = ref.read(authControllerProvider).user;
       if (user != null) {
         _nameController.text = user.name;
-        _handleController.text = user.handle ?? '';
-        _locationController.text = user.location ?? '';
-        _bioController.text = user.bio ?? '';
+        _handleController.text = user.handle;
+        _locationController.text = user.location;
+        _bioController.text = user.bio;
       }
     });
   }
@@ -48,15 +50,13 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   Future<void> _saveProfile() async {
     setState(() => _isLoading = true);
     try {
-      final repository = ref.read(userRepositoryProvider);
-      await repository.updateProfile({
-        'name': _nameController.text,
-        'handle': _handleController.text,
-        'location': _locationController.text,
-        'bio': _bioController.text,
+      await ref.read(authControllerProvider.notifier).updateProfile({
+        'name': _nameController.text.trim(),
+        'handle': _handleController.text.trim(),
+        'location': _locationController.text.trim(),
+        'bio': _bioController.text.trim(),
       }, imagePath: _imageFile?.path);
 
-      ref.invalidate(userProfileProvider);
       if (mounted) {
         context.pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,7 +76,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(userProfileProvider).value;
+    final user = ref.watch(authControllerProvider).user;
 
     return Scaffold(
       appBar: AppBar(

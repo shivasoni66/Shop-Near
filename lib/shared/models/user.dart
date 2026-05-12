@@ -3,11 +3,15 @@ class User {
   final String name;
   final String email;
   final String role;
-  final String? avatar;
-  final String? handle;
-  final String? bio;
-  final String? location;
-  final String? phone;
+  final String avatar;
+  final String handle;
+  final String bio;
+  final String location;
+  final String phone;
+  final int points;
+  final int ordersCount;
+  final int followingCount;
+  final int reviewsCount;
   final UserSettings settings;
 
   User({
@@ -15,11 +19,15 @@ class User {
     required this.name,
     required this.email,
     required this.role,
-    this.avatar,
-    this.handle,
-    this.bio,
-    this.location,
-    this.phone,
+    this.avatar = '',
+    this.handle = '',
+    this.bio = '',
+    this.location = '',
+    this.phone = '',
+    this.points = 0,
+    this.ordersCount = 0,
+    this.followingCount = 0,
+    this.reviewsCount = 0,
     UserSettings? settings,
   }) : settings = settings ?? UserSettings();
 
@@ -29,11 +37,15 @@ class User {
       name: map['name'] ?? '',
       email: map['email'] ?? '',
       role: map['role'] ?? '',
-      avatar: map['avatar'],
-      handle: map['handle'],
-      bio: map['bio'],
-      location: map['location'],
-      phone: map['phone'],
+      avatar: map['avatar'] ?? '',
+      handle: map['handle'] ?? '',
+      bio: map['bio'] ?? '',
+      location: map['location'] ?? '',
+      phone: map['phone'] ?? '',
+      points: map['points'] ?? 0,
+      ordersCount: map['ordersCount'] ?? 0,
+      followingCount: map['followingCount'] ?? 0,
+      reviewsCount: map['reviewsCount'] ?? 0,
       settings: map['settings'] != null
           ? UserSettings.fromMap(map['settings'])
           : UserSettings(),

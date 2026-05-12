@@ -16,19 +16,20 @@ class SocketService {
 
   Future<void> connect() async {
     final token = await _storage.read(key: 'jwt_token');
-    
+
     // Use OptionBuilder for better type safety and configuration
     _socket = IO.io(
-      ApiEndpoints.baseUrl.replaceFirst('/api', ''), 
-      IO.OptionBuilder()
-        .setTransports(['websocket'])
-        .disableAutoConnect()
-        .setAuth({'token': token}) // Server-side expects 'token' in auth handshake
-        .build()
-    );
-    
+        ApiEndpoints.baseUrl.replaceFirst('/api', ''),
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .disableAutoConnect()
+            .setAuth({
+              'token': token
+            }) // Server-side expects 'token' in auth handshake
+            .build());
+
     _socket?.connect();
-    
+
     _socket?.onConnect((_) {
       print('Connected to Socket.IO server');
     });

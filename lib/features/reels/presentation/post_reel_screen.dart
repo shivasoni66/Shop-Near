@@ -7,6 +7,98 @@ class PostReelScreen extends StatelessWidget {
   const PostReelScreen({super.key});
 
   @override
+  ConsumerState<PostReelScreen> createState() => _PostReelScreenState();
+}
+
+class _PostReelScreenState extends ConsumerState<PostReelScreen> {
+  final ImagePicker _picker = ImagePicker();
+  XFile? _selectedVideo;
+  VideoPlayerController? _videoController;
+  final TextEditingController _captionController = TextEditingController();
+  bool _isUploading = false;
+
+  Future<void> _pickVideo() async {
+    try {
+      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+      if (video != null) {
+        setState(() {
+          _selectedVideo = video;
+        });
+        _initializeVideoPlayer();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick video: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _initializeVideoPlayer() async {
+    _videoController?.dispose();
+    
+    if (kIsWeb) {
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(_selectedVideo!.path));
+    } else {
+      _videoController = VideoPlayerController.file(File(_selectedVideo!.path));
+    }
+
+    await _videoController!.initialize();
+    _videoController!.setLooping(true);
+    _videoController!.play();
+    setState(() {});
+  }
+
+  Future<void> _uploadReel() async {
+    if (_selectedVideo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a video first')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final repository = ref.read(reelRepositoryProvider);
+      await repository.uploadReel(_selectedVideo!, _captionController.text.trim());
+      
+      // The socket event will prepend the new reel automatically,
+      // but call refresh as a safety net in case of missed events
+      await ref.read(reelsProvider.notifier).refresh();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reel posted successfully! 🎉')),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to post reel: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    _captionController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(

@@ -431,6 +431,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         child: Text(emoji, style: const TextStyle(fontSize: 34)),
       ),
     );
+  }
+
   void _showLogoutDialog() {
     showDialog(
       context: context,

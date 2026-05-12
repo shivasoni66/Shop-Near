@@ -33,6 +33,13 @@ class Reel {
       likesCount = map['likes'];
     }
 
+    int commentsCount = 0;
+    if (map['comments'] is List) {
+      commentsCount = (map['comments'] as List).length;
+    } else if (map['comments'] is int) {
+      commentsCount = map['comments'];
+    }
+
     return Reel(
       id: map['_id'] ?? '',
       sellerId: sellerId,
@@ -40,7 +47,7 @@ class Reel {
       videoUrl: map['videoUrl'] ?? '',
       description: map['caption'] ?? map['description'] ?? '',
       likes: likesCount,
-      comments: map['comments'] ?? 0,
+      comments: commentsCount,
       emoji: sellerObj != null ? sellerObj['avatar'] : map['emoji'],
     );
   }

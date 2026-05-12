@@ -73,8 +73,9 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
       final repository = ref.read(reelRepositoryProvider);
       await repository.uploadReel(_selectedVideo!, _captionController.text.trim());
       
-      // Refresh reels
-      ref.invalidate(reelsProvider);
+      // The socket event will prepend the new reel automatically,
+      // but call refresh as a safety net in case of missed events
+      await ref.read(reelsProvider.notifier).refresh();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

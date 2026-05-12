@@ -54,4 +54,32 @@ class ReelRepository {
       rethrow;
     }
   }
+
+  Future<void> likeReel(String reelId) async {
+    try {
+      await _apiClient.post('${ApiEndpoints.reels}/$reelId/like');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> commentOnReel(String reelId, String text) async {
+    try {
+      await _apiClient.post('${ApiEndpoints.reels}/$reelId/comment', data: {'text': text});
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getReelComments(String reelId) async {
+    try {
+      final response = await _apiClient.get('${ApiEndpoints.reels}/$reelId/comments');
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

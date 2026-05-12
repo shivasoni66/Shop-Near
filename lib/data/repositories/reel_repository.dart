@@ -80,4 +80,32 @@ class ReelRepository {
       rethrow;
     }
   }
+  Future<List<Reel>> getMyReels() async {
+    try {
+      final response = await _apiClient.get('${ApiEndpoints.reels}/seller/me');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((item) => Reel.fromMap(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> editReelCaption(String reelId, String newCaption) async {
+    try {
+      await _apiClient.put('${ApiEndpoints.reels}/$reelId', data: {'caption': newCaption});
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteReel(String reelId) async {
+    try {
+      await _apiClient.delete('${ApiEndpoints.reels}/$reelId');
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

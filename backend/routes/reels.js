@@ -117,4 +117,64 @@ router.get('/:id/comments', async (req, res) => {
   }
 });
 
+// Get seller's own reels
+router.get('/seller/me', auth, async (req, res) => {
+  try {
+    const reels = await Reel.find({ seller: req.user.id }).populate('seller', 'name avatar');
+    res.json(reels);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Edit a reel caption
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const reel = await Reel.findById(req.params.id);
+    if (!reel) return res.status(404).json({ message: 'Reel not found' });
+    
+    // Check authorization
+    if (reel.seller.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to edit this reel' });
+    }
+
+    reel.caption = req.body.caption || reel.caption;
+    await reel.save();
+
+    await reel.populate('seller', 'name avatar');
+    if (req.io) {
+      req.io.emit('reel_updated', reel);
+    }
+
+    res.json(reel);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a reel
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const reel = await Reel.findById(req.params.id);
+    if (!reel) return res.status(404).json({ message: 'Reel not found' });
+
+    // Check authorization
+    if (reel.seller.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to delete this reel' });
+    }
+
+    // Optionally delete from cloudinary using cloudinary.uploader.destroy
+    // if we stored the public_id, but here we just delete from db.
+    await reel.deleteOne();
+
+    if (req.io) {
+      req.io.emit('reel_deleted', req.params.id);
+    }
+
+    res.json({ message: 'Reel deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

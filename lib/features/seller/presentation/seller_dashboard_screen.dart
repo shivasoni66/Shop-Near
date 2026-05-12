@@ -315,6 +315,14 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
           ),
           _buildActionBtn(
             context,
+            Icons.video_library_outlined,
+            AppColors.primary,
+            'My Reels',
+            'Manage reels',
+            () => context.push('/seller/reels'),
+          ),
+          _buildActionBtn(
+            context,
             Icons.chat_bubble_outline,
             AppColors.success,
             'Messages',

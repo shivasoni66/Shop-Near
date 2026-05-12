@@ -28,6 +28,7 @@ import '../../features/seller/presentation/seller_orders_screen.dart';
 import '../../features/seller/presentation/seller_analytics_screen.dart';
 import '../../features/seller/presentation/add_product_screen.dart';
 import '../../features/seller/presentation/go_live_setup_screen.dart';
+import '../../features/seller/presentation/seller_reels_screen.dart';
 import '../../features/reels/presentation/post_reel_screen.dart';
 import '../../features/reels/presentation/reels_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -235,6 +236,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/seller/post-reel',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const PostReelScreen(),
+      ),
+      GoRoute(
+        path: '/seller/reels',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SellerReelsScreen(),
       ),
     ],
   );

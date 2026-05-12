@@ -9,8 +9,6 @@ import '../../../shared/models/reel.dart';
 import '../../../shared/providers/repository_providers.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/constants/api_endpoints.dart';
-import 'package:flutter/foundation.dart';
-
 
 class ReelsScreen extends ConsumerStatefulWidget {
   const ReelsScreen({super.key});
@@ -29,7 +27,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
   }
 
   void _showComments(BuildContext context, String reelId) {
-    // Basic comments bottom sheet
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.black.withOpacity(0.9),
@@ -80,8 +77,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
             },
           );
         },
-
-        loading: () => const Center(child: CircularProgressIndicator()),
         loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
         error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
       ),
@@ -96,26 +91,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
   Widget _buildReelItem(Reel reel, bool isActive) {
     return Stack(
       children: [
-        // Actual Video Player
         Positioned.fill(
           child: ReelVideoPlayer(videoUrl: reel.videoUrl, emoji: reel.emoji, isActive: isActive),
         ),
-        // Video Placeholder
-        Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [const Color(0xFF2B1B54), const Color(0xFF1A1D2E)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(reel.emoji ?? '🎬', style: const TextStyle(fontSize: 140)),
-        ),
-        
-        // Dark Overlay at Bottom
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
@@ -128,52 +106,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
             ),
           ),
         ),
-
-        // Right Side Actions
-        Positioned(
-          right: 16,
-          bottom: 120,
-          child: Column(
-            children: [
-              _buildReelAction(
-                icon: Icons.favorite, 
-                label: reel.likes.toString(), 
-                col: Colors.redAccent,
-                onTap: () {
-                  ref.read(reelRepositoryProvider).likeReel(reel.id);
-                },
-              ),
-              const SizedBox(height: 20),
-              _buildReelAction(
-                icon: Icons.chat_bubble, 
-                label: reel.comments.toString(), 
-                col: Colors.white,
-                onTap: () {
-                  _showComments(context, reel.id);
-                },
-              ),
-              const SizedBox(height: 20),
-              _buildReelAction(icon: Icons.share, label: 'Share', col: Colors.white, onTap: () {}),
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: () => context.push('/home/product/${reel.sellerId}'),
-                child: Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                  child: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Bottom Info
-        // User Info & Description
         Positioned(
           left: 16,
           bottom: 24,
@@ -206,8 +138,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
             ],
           ),
         ),
-
-        // Side Actions
         Positioned(
           right: 16,
           bottom: 24,
@@ -307,7 +237,6 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
     }
   }
 
-  Future<void> _initMobilePlayer() async {
   Future<void> _initPlayer() async {
     final url = _resolvedUrl;
     if (url.isEmpty) {
@@ -364,7 +293,7 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
           _controller!.play();
         }
       },
-      child: SizedBox.expand(
+      child: Center(
         child: FittedBox(
           fit: BoxFit.cover,
           child: SizedBox(
@@ -372,10 +301,6 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
             height: _controller!.value.size.height,
             child: VideoPlayer(_controller!),
           ),
-      child: Center(
-        child: AspectRatio(
-          aspectRatio: _controller!.value.aspectRatio,
-          child: VideoPlayer(_controller!),
         ),
       ),
     );

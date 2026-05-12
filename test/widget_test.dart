@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shop_near/app.dart';
@@ -12,10 +13,10 @@ void main() {
     );
 
     // Verify that our onboarding screen shows the brand name.
-    // Note: findsOneWidget might fail if onboarding isn't the first screen,
+    // Note: findsOneWidget might fail if onboarding isn't the first screen, 
     // but we use ProviderScope as required by Riverpod.
     expect(find.byType(ShopNearApp), findsOneWidget);
-
+    
     // Verify that the app builds without errors.
     expect(find.text('ShopNear', findRichText: true), findsOneWidget);
   });

@@ -22,7 +22,7 @@ class LiveSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with TickerProviderStateMixin {
-  RtcEngine? _engine;
+  late RtcEngine _engine;
   bool _localUserJoined = false;
   bool _isJoined = false;
   int? _remoteUid;
@@ -30,7 +30,12 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
   final math.Random _random = math.Random();
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<Map<String, dynamic>> _chatMessages = [];
+  final List<Map<String, dynamic>> _chatMessages = [
+    {'user': 'Anjali', 'msg': 'Love this collection! 😍'},
+    {'user': 'Rohit K', 'msg': 'What\'s the price for blue one?'},
+    {'user': 'Priya', 'msg': '₹1,299 only! Limited stock!', 'isSeller': true},
+    {'user': 'Meena', 'msg': 'Can I get COD option? 🙏'},
+  ];
   @override
   void initState() {
     super.initState();
@@ -43,12 +48,12 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
 
     //create the engine
     _engine = createAgoraRtcEngine();
-    await _engine!.initialize(const RtcEngineContext(
+    await _engine.initialize(const RtcEngineContext(
       appId: AgoraConfig.appId,
       channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
     ));
 
-    _engine!.registerEventHandler(
+    _engine.registerEventHandler(
       RtcEngineEventHandler(
         onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
           debugPrint("local user ${connection.localUid} joined");
@@ -77,13 +82,13 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
     final user = ref.read(authControllerProvider).user;
     final isBroadcaster = user?.role == 'seller';
 
-    await _engine!.setClientRole(
+    await _engine.setClientRole(
       role: isBroadcaster ? ClientRoleType.clientRoleBroadcaster : ClientRoleType.clientRoleAudience,
     );
-    await _engine!.enableVideo();
-    await _engine!.startPreview();
+    await _engine.enableVideo();
+    await _engine.startPreview();
 
-    await _engine!.joinChannel(
+    await _engine.joinChannel(
       token: AgoraConfig.token,
       channelId: widget.session?.id ?? 'demo_channel',
       uid: 0,
@@ -119,78 +124,6 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
         _showHeartAnimation(data['emoji']);
       }
     });
-
-    // Listen for global live updates (like session ending)
-    socketService.on('live_update', (data) {
-      if (data['action'] == 'ended' && data['sessionId'] == (widget.session?.id ?? 'demo_channel')) {
-        _handleSessionEnded();
-      }
-    });
-  }
-
-  void _handleSessionEnded() {
-    if (!mounted) return;
-    setState(() => _isJoined = false);
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Live Ended', textAlign: TextAlign.center),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('🎥', style: TextStyle(fontSize: 40)),
-            SizedBox(height: 10),
-            Text('This live session has ended. Thank you for joining!'),
-          ],
-        ),
-      ),
-    );
-
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pop(); // Close dialog
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.go('/home');
-        }
-      }
-    });
-  }
-
-  Future<void> _endLiveSession() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('End Live?'),
-        content: const Text('Are you sure you want to end this live session?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true), 
-            child: const Text('End Now', style: TextStyle(color: AppColors.liveRed)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        final repository = ref.read(liveSessionRepositoryProvider);
-        await repository.endLiveSession(widget.session!.id);
-        if (mounted) {
-          context.go('/seller');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-        }
-      }
-    }
   }
 
   void _scrollToBottom() {
@@ -264,23 +197,19 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
   void dispose() {
     _chatController.dispose();
     _scrollController.dispose();
-    _engine?.leaveChannel();
-    _engine?.release();
+    _engine.leaveChannel();
+    _engine.release();
     super.dispose();
   }
 
   Widget _videoView() {
-    if (_engine == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     final user = ref.read(authControllerProvider).user;
     final isBroadcaster = user?.role == 'seller';
 
     if (isBroadcaster) {
       return AgoraVideoView(
         controller: VideoViewController(
-          rtcEngine: _engine!,
+          rtcEngine: _engine,
           canvas: const VideoCanvas(uid: 0),
         ),
       );
@@ -289,7 +218,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
     if (_remoteUid != null) {
       return AgoraVideoView(
         controller: VideoViewController.remote(
-          rtcEngine: _engine!,
+          rtcEngine: _engine,
           canvas: VideoCanvas(uid: _remoteUid),
           connection: RtcConnection(channelId: widget.session?.id ?? 'demo_channel'),
         ),
@@ -363,8 +292,8 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.session?.sellerName ?? 'Seller', style: AppTextStyles.labelMedium.copyWith(color: Colors.white)),
-                          Text('${widget.session?.viewers ?? 0} viewers', style: AppTextStyles.labelSmall.copyWith(color: Colors.white70)),
+                          Text('Priya Fashion', style: AppTextStyles.labelMedium.copyWith(color: Colors.white)),
+                          Text('1.2k viewers', style: AppTextStyles.labelSmall.copyWith(color: Colors.white70)),
                         ],
                       ),
                       const SizedBox(width: 12),
@@ -377,16 +306,6 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                   ),
                 ),
                 const Spacer(),
-                if (ref.read(authControllerProvider).user?.role == 'seller')
-                  GestureDetector(
-                    onTap: _endLiveSession,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(color: AppColors.liveRed, borderRadius: BorderRadius.circular(16)),
-                      child: Text('End Live', style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
                 const LiveBadge(pulse: true),
               ],
             ),
@@ -473,8 +392,8 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.session?.title ?? 'Special Offer Item', style: AppTextStyles.labelMedium.copyWith(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
-                        Text('Exclusive Deal', style: AppTextStyles.labelMedium.copyWith(color: AppColors.accent, fontSize: 14, fontWeight: FontWeight.w900)),
+                        Text('Silk Saree — Royal Blue', style: AppTextStyles.labelMedium.copyWith(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+                        Text('₹1,299', style: AppTextStyles.labelMedium.copyWith(color: AppColors.accent, fontSize: 14, fontWeight: FontWeight.w900)),
                       ],
                     ),
                   ),

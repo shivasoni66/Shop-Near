@@ -81,7 +81,7 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
       ref.invalidate(liveSessionsProvider);
 
       if (mounted) {
-        context.push('/home/live-session', extra: session);
+        context.push('/home/live', extra: session);
       }
     } catch (e) {
       if (mounted) {
@@ -214,8 +214,7 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
             style: AppTextStyles.bodyMedium.copyWith(color: AppColors.text),
             decoration: InputDecoration(
               hintText: 'e.g. New Saree Collection Launch 🌸',
-              hintStyle:
-                  AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
+              hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
               filled: true,
               fillColor: AppColors.background,
               border: OutlineInputBorder(
@@ -419,13 +418,9 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
       ),
       child: ElevatedButton.icon(
         onPressed: _isLoading ? null : _startLive,
-        icon: _isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2))
-            : const Icon(Icons.sensors),
+        icon: _isLoading 
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+          : const Icon(Icons.sensors),
         label: Text(_isLoading ? 'Starting...' : 'Start Live Now'),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.liveRed,

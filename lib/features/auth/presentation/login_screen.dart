@@ -21,7 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    
+
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
@@ -29,9 +29,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    await ref.read(authControllerProvider.notifier).login(email, password);
+    final authState = await ref.read(authControllerProvider.notifier).login(email, password);
     
-    final authState = ref.read(authControllerProvider);
     if (authState.status == AuthStatus.error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -177,7 +176,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         Text(
                           'Don\'t have an account? ',
-                          style: AppTextStyles.bodySmall.copyWith(color: Colors.white70),
+                          style: AppTextStyles.bodySmall
+                              .copyWith(color: Colors.white70),
                         ),
                         TextButton(
                           onPressed: () => context.push('/register'),
@@ -231,7 +231,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-          prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.5), size: 22),
+          prefixIcon:
+              Icon(icon, color: Colors.white.withOpacity(0.5), size: 22),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 18),
         ),

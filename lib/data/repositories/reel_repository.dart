@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../core/network/api_client.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../shared/models/reel.dart';
@@ -25,7 +26,7 @@ class ReelRepository {
   Future<void> uploadReel(XFile videoFile, String caption) async {
     try {
       final bytes = await videoFile.readAsBytes();
-      
+
       // Ensure the filename has an extension so Dio sends the correct content-type
       String filename = videoFile.name;
       if (filename.isEmpty || !filename.contains('.')) {
@@ -37,7 +38,8 @@ class ReelRepository {
         'caption': caption,
       });
 
-      final response = await _apiClient.post(ApiEndpoints.reels, data: formData);
+      final response =
+          await _apiClient.post(ApiEndpoints.reels, data: formData);
       if (response.statusCode != 201 && response.statusCode != 200) {
         throw Exception('Failed to upload reel: ${response.data}');
       }
@@ -65,7 +67,8 @@ class ReelRepository {
 
   Future<void> commentOnReel(String reelId, String text) async {
     try {
-      await _apiClient.post('${ApiEndpoints.reels}/$reelId/comment', data: {'text': text});
+      await _apiClient
+          .post('${ApiEndpoints.reels}/$reelId/comment', data: {'text': text});
     } catch (e) {
       rethrow;
     }
@@ -73,7 +76,8 @@ class ReelRepository {
 
   Future<List<dynamic>> getReelComments(String reelId) async {
     try {
-      final response = await _apiClient.get('${ApiEndpoints.reels}/$reelId/comments');
+      final response =
+          await _apiClient.get('${ApiEndpoints.reels}/$reelId/comments');
       if (response.statusCode == 200) {
         return response.data;
       }

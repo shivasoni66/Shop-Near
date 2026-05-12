@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,18 +21,35 @@ class ReelsScreen extends ConsumerStatefulWidget {
 
 class _ReelsScreenState extends ConsumerState<ReelsScreen> {
   final PageController _pageController = PageController();
-  int _currentIndex = 0;
 
   @override
-  void initState() {
-    super.initState();
-    // Ensure socket is connected when the reels screen opens
-    Future.microtask(() {
-      ref.read(socketServiceProvider).connect();
-    });
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
-  Future<void> _refresh() => ref.read(reelsProvider.notifier).refresh();
+  void _showComments(BuildContext context, String reelId) {
+    // Basic comments bottom sheet
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black.withOpacity(0.9),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Column(
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('Comments', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const Expanded(child: Center(child: Text('No comments yet', style: TextStyle(color: Colors.white70)))),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,39 +64,31 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.video_library_outlined, size: 80, color: Colors.white54),
+                  const Icon(Icons.video_library_outlined, size: 64, color: Colors.white24),
                   const SizedBox(height: 16),
-                  Text('No reels yet', style: AppTextStyles.h2.copyWith(color: Colors.white)),
-                  const SizedBox(height: 8),
-                  Text('Be the first to post one!', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white70)),
+                  Text('No reels available yet', style: AppTextStyles.bodyLarge.copyWith(color: Colors.white70)),
                 ],
               ),
             );
           }
-          
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            color: Colors.white,
-            backgroundColor: Colors.black54,
-            child: PageView.builder(
-              controller: _pageController,
-              scrollDirection: Axis.vertical,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              itemCount: reels.length,
-              itemBuilder: (context, index) {
-                final reel = reels[index];
-                return _buildReelItem(reel, index == _currentIndex);
-              },
-            ),
+          return PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            itemCount: reels.length,
+            itemBuilder: (context, index) {
+              return _buildReelItem(reels[index], true);
+            },
           );
         },
 
         loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
         error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => context.push('/seller/post-reel'),
       ),
     );
   }
@@ -163,32 +173,65 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
         ),
 
         // Bottom Info
+        // User Info & Description
         Positioned(
           left: 16,
+          bottom: 24,
           right: 80,
-          bottom: 100,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  CircleAvatar(radius: 18, backgroundColor: Colors.white, child: Text(reel.emoji ?? '👤')),
-                  const SizedBox(width: 10),
-                  Text(reel.sellerName, style: AppTextStyles.labelLarge.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
-                  const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
-                    child: Text('Follow', style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontSize: 10)),
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.white24,
+                    child: Text(reel.sellerName.isNotEmpty ? reel.sellerName[0] : 'U', 
+                      style: const TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    reel.sellerName,
+                    style: AppTextStyles.bodyLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               Text(
                 reel.description,
-                style: AppTextStyles.bodyMedium.copyWith(color: Colors.white, fontSize: 13, height: 1.4),
-                maxLines: 3,
+                style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+
+        // Side Actions
+        Positioned(
+          right: 16,
+          bottom: 24,
+          child: Column(
+            children: [
+              _buildReelAction(
+                icon: Icons.favorite, 
+                label: reel.likes.toString(), 
+                col: Colors.redAccent,
+                onTap: () => ref.read(reelRepositoryProvider).likeReel(reel.id),
+              ),
+              const SizedBox(height: 20),
+              _buildReelAction(
+                icon: Icons.chat_bubble, 
+                label: reel.comments.toString(), 
+                col: Colors.white,
+                onTap: () => _showComments(context, reel.id),
+              ),
+              const SizedBox(height: 20),
+              _buildReelAction(
+                icon: Icons.share, 
+                label: 'Share', 
+                col: Colors.white,
+                onTap: () {},
               ),
             ],
           ),
@@ -197,117 +240,19 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
     );
   }
 
-  void _showComments(BuildContext context, String reelId) {
-    final commentController = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.grey[900],
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Comments', style: AppTextStyles.h3.copyWith(color: Colors.white)),
-              const SizedBox(height: 16),
-              Expanded(
-                child: FutureBuilder<List<dynamic>>(
-                  future: ref.read(reelRepositoryProvider).getReelComments(reelId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: Colors.white));
-                    }
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error loading comments', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)));
-                    }
-                    final comments = snapshot.data ?? [];
-                    if (comments.isEmpty) {
-                      return Center(child: Text('No comments yet', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54)));
-                    }
-                    return ListView.builder(
-                      itemCount: comments.length,
-                      itemBuilder: (context, index) {
-                        final comment = comments[index];
-                        final user = comment['user'] ?? {};
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.primary,
-                            child: Text(user['avatar'] ?? '👤', style: const TextStyle(fontSize: 16)),
-                          ),
-                          title: Text(user['name'] ?? 'User', style: AppTextStyles.labelLarge.copyWith(color: Colors.white)),
-                          subtitle: Text(comment['text'] ?? '', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white70)),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: commentController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Add a comment...',
-                        hintStyle: const TextStyle(color: Colors.white54),
-                        filled: true,
-                        fillColor: Colors.grey[800],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: AppColors.primary),
-                    onPressed: () async {
-                      final text = commentController.text.trim();
-                      if (text.isNotEmpty) {
-                        try {
-                          await ref.read(reelRepositoryProvider).commentOnReel(reelId, text);
-                          commentController.clear();
-                          // ignore: use_build_context_synchronously
-                          Navigator.pop(context);
-                          // It will auto-refresh comments when reopened because the socket updates the reel state
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to post comment: $e')));
-                        }
-                      }
-                    },
-                  )
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildReelAction({required IconData icon, required String label, required Color col, required VoidCallback onTap}) {
+  Widget _buildReelAction({
+    required IconData icon, 
+    required String label, 
+    required Color col,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
-          Icon(icon, color: col, size: 30),
+          Icon(icon, size: 32, color: col),
           const SizedBox(height: 4),
-          Text(label,
-              style: AppTextStyles.labelSmall
-                  .copyWith(color: Colors.white, fontSize: 11)),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
         ],
       ),
     );
@@ -337,9 +282,7 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
       return videoUrl;
     }
-    // Relative path — strip leading slash to avoid double slash
     final rel = videoUrl.startsWith('/') ? videoUrl.substring(1) : videoUrl;
-    // Use the base URL from ApiEndpoints
     final baseUrl = ApiEndpoints.baseUrl.replaceAll('/api', '');
     return '$baseUrl/$rel';
   }
@@ -347,7 +290,7 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    _initMobilePlayer();
+    _initPlayer();
   }
 
   @override
@@ -365,6 +308,7 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
   }
 
   Future<void> _initMobilePlayer() async {
+  Future<void> _initPlayer() async {
     final url = _resolvedUrl;
     if (url.isEmpty) {
       setState(() => _error = true);
@@ -428,6 +372,10 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
             height: _controller!.value.size.height,
             child: VideoPlayer(_controller!),
           ),
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: _controller!.value.aspectRatio,
+          child: VideoPlayer(_controller!),
         ),
       ),
     );

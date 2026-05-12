@@ -90,11 +90,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
       ),
+      // Live explorer — buyer browses active sessions
       GoRoute(
         path: '/home/live',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const LiveExplorerScreen(),
       ),
+      // Live session — actual full-screen video stream
       GoRoute(
         path: '/home/live-session',
         parentNavigatorKey: _rootNavigatorKey,

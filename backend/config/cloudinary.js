@@ -1,7 +1,6 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 require('dotenv').config();
 
 cloudinary.config({
@@ -10,20 +9,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Upload reels directly to Cloudinary (no local storage)
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'shop-near/reels',
-    resource_type: 'video',
-    allowed_formats: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
-    transformation: [{ quality: 'auto' }],
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'shop-near',
-    resource_type: 'auto', // This allows both images and videos
-    allowed_formats: ['jpg', 'png', 'mp4', 'mov']
+    resource_type: 'auto',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'mp4', 'mov', 'avi', 'mkv', 'webm']
   }
 });
 

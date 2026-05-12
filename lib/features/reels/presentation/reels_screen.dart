@@ -1,3 +1,5 @@
+import 'dart:ui_web' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -468,8 +470,6 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
         child: Text(widget.emoji ?? '🎬', style: const TextStyle(fontSize: 140)),
       );
     }
-
-    if (!kIsWeb && (!_initialized || _controller == null)) {
 
     if (!_initialized || _controller == null) {
       return const Center(child: CircularProgressIndicator(color: Colors.white));

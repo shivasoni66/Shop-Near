@@ -9,12 +9,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Single unified storage for all media (images & videos)
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'shop-near',
-    resource_type: 'auto', // This handles both image and video automatically
+    resource_type: 'auto',
     allowed_formats: ['jpg', 'png', 'jpeg', 'mp4', 'mov', 'avi', 'mkv', 'webm']
   }
 });

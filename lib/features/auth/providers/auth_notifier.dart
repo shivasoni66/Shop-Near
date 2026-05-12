@@ -19,9 +19,12 @@ class AuthState {
 
   factory AuthState.initial() => AuthState(status: AuthStatus.initial);
   factory AuthState.loading() => AuthState(status: AuthStatus.loading);
-  factory AuthState.authenticated(User user) => AuthState(status: AuthStatus.authenticated, user: user);
-  factory AuthState.unauthenticated() => AuthState(status: AuthStatus.unauthenticated);
-  factory AuthState.error(String message) => AuthState(status: AuthStatus.error, errorMessage: message);
+  factory AuthState.authenticated(User user) =>
+      AuthState(status: AuthStatus.authenticated, user: user);
+  factory AuthState.unauthenticated() =>
+      AuthState(status: AuthStatus.unauthenticated);
+  factory AuthState.error(String message) =>
+      AuthState(status: AuthStatus.error, errorMessage: message);
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
@@ -47,49 +50,49 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   String _getDioError(DioException e) {
-    if (e.type == DioExceptionType.connectionTimeout) return 'Connection timeout. Is the server running?';
-    if (e.type == DioExceptionType.receiveTimeout) return 'Server taking too long to respond.';
-    if (e.type == DioExceptionType.connectionError) return 'Could not connect to server. Check your IP and Wi-Fi.';
-    
+    if (e.type == DioExceptionType.connectionTimeout)
+      return 'Connection timeout. Is the server running?';
+    if (e.type == DioExceptionType.receiveTimeout)
+      return 'Server taking too long to respond.';
+    if (e.type == DioExceptionType.connectionError)
+      return 'Could not connect to server. Check your IP and Wi-Fi.';
+
     if (e.response != null && e.response?.data != null) {
       final data = e.response?.data;
       if (data is Map) {
-        return data['message'] ?? data['error'] ?? 'Error: ${e.response?.statusCode}';
+        return data['message'] ??
+            data['error'] ??
+            'Error: ${e.response?.statusCode}';
       }
     }
-    
+
     return e.message ?? 'An unknown network error occurred';
   }
 
-  Future<AuthState> login(String email, String password) async {
+  Future<void> login(String email, String password) async {
     state = AuthState.loading();
     try {
-      final data = await _ref.read(authRepositoryProvider).login(email, password);
+      final data =
+          await _ref.read(authRepositoryProvider).login(email, password);
       final user = User.fromMap(data['user']);
       state = AuthState.authenticated(user);
-      return state;
     } on DioException catch (e) {
       state = AuthState.error(_getDioError(e));
-      return state;
     } catch (e) {
       state = AuthState.error(e.toString());
-      return state;
     }
   }
 
-  Future<AuthState> register(Map<String, dynamic> userData) async {
+  Future<void> register(Map<String, dynamic> userData) async {
     state = AuthState.loading();
     try {
       final data = await _ref.read(authRepositoryProvider).register(userData);
       final user = User.fromMap(data['user']);
       state = AuthState.authenticated(user);
-      return state;
     } on DioException catch (e) {
       state = AuthState.error(_getDioError(e));
-      return state;
     } catch (e) {
       state = AuthState.error(e.toString());
-      return state;
     }
   }
 
@@ -99,6 +102,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-final authControllerProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+final authControllerProvider =
+    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(ref);
 });

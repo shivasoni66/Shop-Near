@@ -11,7 +11,7 @@ import 'package:video_player/video_player.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
-class PostReelScreen extends ConsumerStatefulWidget {
+class PostReelScreen extends StatelessWidget {
   const PostReelScreen({super.key});
 
   @override
@@ -45,9 +45,10 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
 
   Future<void> _initializeVideoPlayer() async {
     _videoController?.dispose();
-    
+
     if (kIsWeb) {
-      _videoController = VideoPlayerController.networkUrl(Uri.parse(_selectedVideo!.path));
+      _videoController =
+          VideoPlayerController.networkUrl(Uri.parse(_selectedVideo!.path));
     } else {
       _videoController = VideoPlayerController.file(File(_selectedVideo!.path));
     }
@@ -72,8 +73,9 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
 
     try {
       final repository = ref.read(reelRepositoryProvider);
-      await repository.uploadReel(_selectedVideo!, _captionController.text.trim());
-      
+      await repository.uploadReel(
+          _selectedVideo!, _captionController.text.trim());
+
       // The socket event will prepend the new reel automatically,
       // but call refresh as a safety net in case of missed events
       await ref.read(reelsProvider.notifier).refresh();
@@ -118,7 +120,9 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
         actions: [
           TextButton(
             onPressed: () => context.pop(),
-            child: Text('Next', style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
+            child: Text('Next',
+                style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.primary, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -133,7 +137,8 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(24),
                 image: const DecorationImage(
-                  image: NetworkImage('https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800'),
+                  image: NetworkImage(
+                      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800'),
                   fit: BoxFit.cover,
                   opacity: 0.6,
                 ),
@@ -141,7 +146,8 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.videocam_outlined, color: Colors.white, size: 64),
+                  const Icon(Icons.videocam_outlined,
+                      color: Colors.white, size: 64),
                   Positioned(
                     bottom: 20,
                     child: Container(
@@ -151,14 +157,15 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 4),
                       ),
-                      child: const Icon(Icons.fiber_manual_record, color: Colors.red, size: 32),
+                      child: const Icon(Icons.fiber_manual_record,
+                          color: Colors.red, size: 32),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // Reel Tools
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -172,7 +179,7 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
               ],
             ),
           ),
-          
+
           // Gallery / Capture Toggle
           Padding(
             padding: const EdgeInsets.only(bottom: 40),
@@ -180,7 +187,8 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(20),

@@ -22,8 +22,8 @@ class Reel {
   factory Reel.fromMap(Map<String, dynamic> map) {
     // Backend populates 'seller' with { _id, name, avatar }
     final sellerObj = map['seller'] is Map ? map['seller'] : null;
-    final sId = sellerObj != null ? (sellerObj['_id'] ?? '') : (map['sellerId'] ?? '');
-    final sName = sellerObj != null ? (sellerObj['name'] ?? '') : (map['sellerName'] ?? '');
+    final sellerId = sellerObj != null ? (sellerObj['_id'] ?? '') : (map['sellerId'] ?? '');
+    final sellerName = sellerObj != null ? (sellerObj['name'] ?? '') : (map['sellerName'] ?? '');
     
     // likes from backend is an array of object IDs
     int likesCount = 0;
@@ -42,8 +42,8 @@ class Reel {
 
     return Reel(
       id: map['_id'] ?? '',
-      sellerId: sId,
-      sellerName: sName,
+      sellerId: sellerId,
+      sellerName: sellerName,
       videoUrl: map['videoUrl'] ?? '',
       description: map['caption'] ?? map['description'] ?? '',
       likes: likesCount,

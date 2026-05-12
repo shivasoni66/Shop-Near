@@ -97,6 +97,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
         // Actual Video Player
         Positioned.fill(
           child: ReelVideoPlayer(videoUrl: reel.videoUrl, emoji: reel.emoji, isActive: isActive),
+        ),
         // Video Placeholder
         Container(
           width: double.infinity,

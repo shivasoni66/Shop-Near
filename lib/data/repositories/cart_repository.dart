@@ -1,4 +1,5 @@
 import '../../core/network/api_client.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../../shared/models/cart_item.dart';
 
 class CartRepository {
@@ -21,8 +22,7 @@ class CartRepository {
 
   Future<void> addToCart(String productId, int quantity) async {
     try {
-      await _apiClient
-          .post('/cart', data: {'productId': productId, 'quantity': quantity});
+      await _apiClient.post('/cart', data: {'productId': productId, 'quantity': quantity});
     } catch (e) {
       rethrow;
     }

@@ -4,11 +4,15 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/providers/product_providers.dart';
+import '../../../shared/providers/dynamic_product_providers.dart';
 import '../../../shared/models/chat_message.dart';
+import '../../../shared/models/product.dart';
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
   final String name;
-  const ChatDetailScreen({super.key, required this.name});
+  final String? productId;
+  const ChatDetailScreen({super.key, required this.name, this.productId});
 
   @override
   ConsumerState<ChatDetailScreen> createState() => _ChatDetailScreenState();
@@ -34,7 +38,40 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           _scrollToBottom();
         }
       });
+      
+      // Pre-fill message with product info but don't auto-send
+      if (widget.productId != null) {
+        _prefillProductMessage();
+      }
     });
+  }
+
+  void _prefillProductMessage() {
+    final productAsync = ref.read(dynamicProductDetailProvider(widget.productId!));
+    productAsync.when(
+      data: (product) {
+        final inquiryMessage = """
+Hi! I'm interested in your product: ${product.name}
+
+📦 Product Details:
+• Price: ₹${product.price.toInt()}
+• Category: ${product.category}
+• Rating: ⭐ ${product.rating} (${product.reviewsCount} reviews)
+
+View Product: https://shopnear.com/product/${product.id}
+
+Is this product still available? I'd like to know more about:
+1. Available sizes and colors
+2. Delivery time
+3. Any current discounts or offers
+
+Thank you! 🙏
+        """;
+        _messageController.text = inquiryMessage;
+      },
+      loading: () {},
+      error: (err, stack) {},
+    );
   }
 
   void _sendMessage() {
@@ -141,6 +178,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       ),
       body: Column(
         children: [
+          if (widget.productId != null) _buildProductInfo(),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -159,6 +197,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   Widget _buildChatBubble(String text, bool isMe) {
+    final hasProductLink = text.contains('https://shopnear.com/product/');
+    
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -174,13 +214,156 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             bottomRight: Radius.circular(isMe ? 0 : 16),
           ),
         ),
-        child: Text(
+        child: hasProductLink ? _buildMessageWithProductLink(text, isMe) : Text(
           text,
           style: AppTextStyles.bodyMedium.copyWith(
             color: isMe ? Colors.white : AppColors.text,
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMessageWithProductLink(String text, bool isMe) {
+    final parts = text.split('https://shopnear.com/product/');
+    final productId = parts.length > 1 ? parts[1].split('\n')[0] : null;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          parts[0],
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: isMe ? Colors.white : AppColors.text,
+          ),
+        ),
+        if (productId != null) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () {
+              // Navigate to product page
+              context.push('/home/product/$productId');
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isMe ? Colors.white.withOpacity(0.2) : AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isMe ? Colors.white.withOpacity(0.3) : AppColors.primary.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.link,
+                    color: isMe ? Colors.white : AppColors.primary,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'View Product',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: isMe ? Colors.white : AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            parts[1].contains('\n') ? parts[1].split('\n').skip(1).join('\n') : '',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: isMe ? Colors.white : AppColors.text,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildProductInfo() {
+    if (widget.productId == null) return const SizedBox.shrink();
+    
+    return Consumer(
+      builder: (context, ref, child) {
+        final productAsync = ref.watch(dynamicProductDetailProvider(widget.productId!));
+        
+        return productAsync.when(
+          data: (product) => Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFFFECD2), Color(0xFFFCB69F)],
+                    ),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(product.imagePlaceholder, style: const TextStyle(fontSize: 24)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: AppTextStyles.labelMedium.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${product.price.toInt()}',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => context.pop(),
+                  child: const Icon(
+                    Icons.close,
+                    color: AppColors.muted,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          loading: () => Container(
+            margin: const EdgeInsets.all(16),
+            height: 74,
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          error: (err, stack) => const SizedBox.shrink(),
+        );
+      },
     );
   }
 
@@ -191,41 +374,84 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         color: AppColors.card,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
-            onPressed: () {},
-          ),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          // Product link hint if product is available
+          if (widget.productId != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.border),
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
               ),
-              child: TextField(
-                controller: _messageController,
-                decoration: const InputDecoration(
-                  hintText: 'Type a message...',
-                  border: InputBorder.none,
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Product link included in message. Seller can click to view product.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.blue.shade700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 16),
+                    onPressed: () {
+                      setState(() {
+                        _messageController.clear();
+                      });
+                    },
+                    color: Colors.blue.shade700,
+                  ),
+                ],
+              ),
+            ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                onPressed: () {},
+              ),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextField(
+                    controller: _messageController,
+                    maxLines: null,
+                    minLines: 1,
+                    decoration: InputDecoration(
+                      hintText: widget.productId != null 
+                          ? 'Edit your message about this product...' 
+                          : 'Type a message...',
+                      border: InputBorder.none,
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
                 ),
-                onSubmitted: (_) => _sendMessage(),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _sendMessage,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _sendMessage,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.send, color: Colors.white, size: 18),
+                ),
               ),
-              child: const Icon(Icons.send, color: Colors.white, size: 18),
-            ),
+            ],
           ),
         ],
       ),

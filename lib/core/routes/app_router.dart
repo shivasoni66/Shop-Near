@@ -10,6 +10,8 @@ import '../../features/live/presentation/live_session_screen.dart';
 import '../../features/live/presentation/live_explorer_screen.dart';
 import '../../shared/models/live_session.dart';
 import '../../features/product/presentation/product_detail_screen.dart';
+import '../../features/product/presentation/enhanced_product_detail_screen.dart';
+import '../../features/product/presentation/custom_product_detail_screen.dart';
 import '../../features/shop/presentation/shop_page_screen.dart';
 import '../../features/cart/presentation/cart_screen.dart';
 import '../../features/chat/presentation/chat_list_screen.dart';
@@ -56,7 +58,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       final status = authState.status;
       final user = authState.user;
 
-      // While checking auth status or loading, don't redirect yet
       if (status == AuthStatus.initial || status == AuthStatus.loading) {
         return null;
       }
@@ -103,7 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home/product/:id',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => ProductDetailScreen(
+        builder: (context, state) => CustomProductDetailScreen(
           productId: state.pathParameters['id'],
         ),
       ),
@@ -153,6 +154,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => ChatDetailScreen(
           name: state.pathParameters['name'] ?? 'Chat',
+          productId: state.uri.queryParameters['product'],
         ),
       ),
       ShellRoute(
@@ -237,5 +239,3 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-}

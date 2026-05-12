@@ -42,13 +42,17 @@ class Reel {
 
     return Reel(
       id: map['_id'] ?? '',
-      sellerId: sellerId,
-      sellerName: sellerName,
+      sellerId: map['sellerId'] ?? '',
+      sellerName: map['sellerName'] ?? '',
       videoUrl: map['videoUrl'] ?? '',
       description: map['caption'] ?? map['description'] ?? '',
       likes: likesCount,
       comments: commentsCount,
       emoji: sellerObj != null ? sellerObj['avatar'] : map['emoji'],
+      description: map['description'] ?? '',
+      likes: map['likes'] ?? 0,
+      comments: map['comments'] ?? 0,
+      emoji: map['emoji'],
     );
   }
 }

@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Post reel
+// Post reel (Seller only)
 router.post('/', auth, upload.single('video'), async (req, res) => {
   try {
     // Temporarily allow anyone to post reels for testing purposes
@@ -26,10 +26,11 @@ router.post('/', auth, upload.single('video'), async (req, res) => {
 
     // multer-storage-cloudinary sets req.file.path to the Cloudinary secure URL
     const videoUrl = req.file.path;
+    if (req.user.role !== 'seller') return res.status(403).json({ message: 'Only sellers can post reels' });
 
     const reel = new Reel({
       seller: req.user.id,
-      videoUrl,
+      videoUrl: req.file.path,
       caption: req.body.caption
     });
     await reel.save();
@@ -48,8 +49,7 @@ router.post('/', auth, upload.single('video'), async (req, res) => {
     
     res.status(201).json(reel);
   } catch (err) {
-    console.error('Reel upload error:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 

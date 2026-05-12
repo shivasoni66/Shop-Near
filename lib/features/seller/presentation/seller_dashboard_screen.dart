@@ -9,14 +9,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/providers/order_providers.dart';
 import '../../../shared/providers/user_providers.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/models/order.dart';
 import '../../../shared/models/user.dart';
 
 class SellerDashboardScreen extends ConsumerStatefulWidget {
   const SellerDashboardScreen({super.key});
 
   @override
-  ConsumerState<SellerDashboardScreen> createState() =>
-      _SellerDashboardScreenState();
+  ConsumerState<SellerDashboardScreen> createState() => _SellerDashboardScreenState();
 }
 
 class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
@@ -57,9 +57,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
           children: [
             userAsync.when(
               data: (user) => _buildHeader(context, user),
-              loading: () => const SizedBox(
-                  height: 220,
-                  child: Center(child: CircularProgressIndicator())),
+              loading: () => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
               error: (err, stack) => _buildHeader(context, null),
             ),
             _buildStatsGrid(context),
@@ -127,9 +125,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
                 children: [
                   Text(
                     'Welcome back 👋',
-                    style: AppTextStyles.labelMedium.copyWith(
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.w500),
+                    style: AppTextStyles.labelMedium.copyWith(color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -143,11 +139,9 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
               ),
               Row(
                 children: [
-                  _buildHeaderIcon(Icons.notifications_none,
-                      () => context.push('/home/notifications')),
+                  _buildHeaderIcon(Icons.notifications_none, () => context.push('/home/notifications')),
                   const SizedBox(width: 8),
-                  _buildHeaderIcon(Icons.settings_outlined,
-                      () => context.push('/home/settings')),
+                  _buildHeaderIcon(Icons.settings_outlined, () => context.push('/home/settings')),
                 ],
               ),
             ],
@@ -180,25 +174,18 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            Expanded(
-                child: _buildStatCard(
-                    context, '₹24K', 'Today', Icons.trending_up, Colors.green)),
+            Expanded(child: _buildStatCard(context, '₹24K', 'Today', Icons.trending_up, Colors.green)),
             const SizedBox(width: 10),
-            Expanded(
-                child: _buildStatCard(context, '18', 'Orders',
-                    Icons.shopping_bag_outlined, AppColors.primary)),
+            Expanded(child: _buildStatCard(context, '18', 'Orders', Icons.shopping_bag_outlined, AppColors.primary)),
             const SizedBox(width: 10),
-            Expanded(
-                child: _buildStatCard(context, '342', 'Viewers',
-                    Icons.visibility_outlined, AppColors.accent)),
+            Expanded(child: _buildStatCard(context, '342', 'Viewers', Icons.visibility_outlined, AppColors.accent)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String value, String label,
-      IconData icon, Color color) {
+  Widget _buildStatCard(BuildContext context, String value, String label, IconData icon, Color color) {
     return GestureDetector(
       onTap: () => context.go('/seller/analytics'),
       child: Container(
@@ -221,18 +208,12 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
             const SizedBox(height: 8),
             Text(
               value,
-              style: AppTextStyles.h3.copyWith(
-                  color: AppColors.text,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900),
+              style: AppTextStyles.h3.copyWith(color: AppColors.text, fontSize: 18, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.muted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600),
+              style: AppTextStyles.labelSmall.copyWith(color: AppColors.muted, fontSize: 10, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -270,8 +251,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
                           end: Alignment.bottomCenter,
                           colors: [
                             index == 6 ? AppColors.accent : AppColors.primary,
-                            (index == 6 ? AppColors.accent : AppColors.primary)
-                                .withOpacity(0.3),
+                            (index == 6 ? AppColors.accent : AppColors.primary).withOpacity(0.3),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(6),
@@ -284,18 +264,13 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
           ),
           const SizedBox(height: 12),
           Row(
-            children: days
-                .map((day) => Expanded(
-                      child: Text(
-                        day,
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.muted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700),
-                      ),
-                    ))
-                .toList(),
+            children: days.map((day) => Expanded(
+              child: Text(
+                day,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.labelSmall.copyWith(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            )).toList(),
           ),
         ],
       ),
@@ -352,9 +327,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
     );
   }
 
-  Widget _buildActionBtn(BuildContext context, IconData icon, Color color,
-      String label, String sub, VoidCallback onTap,
-      {Color? subColor, bool isPulse = false}) {
+  Widget _buildActionBtn(BuildContext context, IconData icon, Color color, String label, String sub, VoidCallback onTap, {Color? subColor, bool isPulse = false}) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedBuilder(
@@ -366,35 +339,26 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
               color: AppColors.card,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: isPulse
-                    ? color.withOpacity(_livePulseController.value)
-                    : AppColors.border,
+                color: isPulse ? color.withOpacity(_livePulseController.value) : AppColors.border,
                 width: isPulse ? 2 : 1.5,
               ),
-              boxShadow: isPulse
-                  ? [
-                      BoxShadow(
-                        color:
-                            color.withOpacity(0.2 * _livePulseController.value),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      )
-                    ]
-                  : [],
+              boxShadow: isPulse ? [
+                BoxShadow(
+                  color: color.withOpacity(0.2 * _livePulseController.value),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                )
+              ] : [],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, color: color, size: 32),
                 const SizedBox(height: 8),
-                Text(label,
-                    style: AppTextStyles.labelLarge
-                        .copyWith(fontWeight: FontWeight.w800, fontSize: 15)),
+                Text(label, style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w800, fontSize: 15)),
                 Text(
                   sub,
-                  style: AppTextStyles.labelSmall.copyWith(
-                      color: subColor ?? AppColors.muted,
-                      fontWeight: FontWeight.w600),
+                  style: AppTextStyles.labelSmall.copyWith(color: subColor ?? AppColors.muted, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -421,7 +385,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
             children: orders.take(3).map((order) {
               Color statusBg;
               Color statusText;
-
+              
               switch (order.status) {
                 case 'Pending':
                   statusBg = const Color(0xFFFEF3C7);
@@ -458,8 +422,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
     );
   }
 
-  Widget _buildOrderItem(BuildContext context, String icon, String name,
-      String sub, String status, Color statusBg, Color statusText) {
+  Widget _buildOrderItem(BuildContext context, String icon, String name, String sub, String status, Color statusBg, Color statusText) {
     return GestureDetector(
       onTap: () => context.go('/seller/orders'),
       child: Container(
@@ -470,10 +433,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.border),
           boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4)),
+            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
         child: Row(
@@ -494,13 +454,9 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
-                      style: AppTextStyles.labelLarge
-                          .copyWith(fontWeight: FontWeight.w800)),
+                  Text(name, style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 2),
-                  Text(sub,
-                      style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.muted, fontWeight: FontWeight.w500)),
+                  Text(sub, style: AppTextStyles.bodySmall.copyWith(color: AppColors.muted, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
@@ -512,10 +468,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
               ),
               child: Text(
                 status,
-                style: AppTextStyles.labelSmall.copyWith(
-                    color: statusText,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10),
+                style: AppTextStyles.labelSmall.copyWith(color: statusText, fontWeight: FontWeight.w900, fontSize: 10),
               ),
             ),
           ],
@@ -541,19 +494,15 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
     );
   }
 
-  Widget _buildBadge(
-      BuildContext context, String emoji, String name, bool earned) {
+  Widget _buildBadge(BuildContext context, String emoji, String name, bool earned) {
     return GestureDetector(
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(earned
-                ? 'You have earned the $name badge! 🏆'
-                : 'Complete 100 sales to earn the $name badge! 🎯'),
+            content: Text(earned ? 'You have earned the $name badge! 🏆' : 'Complete 100 sales to earn the $name badge! 🎯'),
             backgroundColor: earned ? AppColors.success : AppColors.muted,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       },
@@ -562,8 +511,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
         decoration: BoxDecoration(
           color: earned ? const Color(0xFFFFFBF0) : AppColors.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-              color: earned ? AppColors.accent : AppColors.border, width: 1.5),
+          border: Border.all(color: earned ? AppColors.accent : AppColors.border, width: 1.5),
         ),
         child: Column(
           children: [
@@ -572,8 +520,7 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
             Text(
               name,
               textAlign: TextAlign.center,
-              style: AppTextStyles.labelSmall
-                  .copyWith(fontSize: 10, fontWeight: FontWeight.w700),
+              style: AppTextStyles.labelSmall.copyWith(fontSize: 10, fontWeight: FontWeight.w700),
             ),
           ],
         ),

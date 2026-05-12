@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/providers/product_providers.dart';
-import '../../../shared/providers/seller_providers.dart';
+import '../../product/providers/product_notifier.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
@@ -23,8 +22,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _descriptionController = TextEditingController();
   final _tagsController = TextEditingController();
   String _category = 'Fashion & Clothing';
-  bool _isPublishing = false;
-
+  
   final List<XFile> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
 
@@ -49,69 +47,56 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     final oldPrice = double.tryParse(_oldPriceController.text.trim());
     final stock = int.tryParse(_stockController.text.trim());
     final description = _descriptionController.text.trim();
-    final tags =
-        _tagsController.text.trim().split(',').map((e) => e.trim()).toList();
+    final tags = _tagsController.text.trim().split(',').map((e) => e.trim()).toList();
 
-    if (name.isEmpty ||
-        price == null ||
-        stock == null ||
-        _selectedImages.isEmpty) {
+    if (name.isEmpty || price == null || stock == null || _selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Please fill all required fields and add at least one image')),
+        const SnackBar(content: Text('Please fill all required fields and add at least one image')),
       );
       return;
     }
 
-    setState(() => _isPublishing = true);
+    final productData = {
+      'name': name,
+      'price': price,
+      if (oldPrice != null) 'oldPrice': oldPrice,
+      'category': _category,
+      'stock': stock,
+      'description': description,
+      'tags': tags,
+    };
 
-    try {
-      final productData = {
-        'name': name,
-        'price': price,
-        if (oldPrice != null) 'oldPrice': oldPrice,
-        'category': _category,
-        'stock': stock,
-        'description': description,
-        'tags': tags,
-      };
+    final imagePaths = _selectedImages.map((e) => e.path).toList();
 
-      final imagePaths = _selectedImages.map((e) => e.path).toList();
+    await ref.read(productControllerProvider.notifier).createProduct(productData, imagePaths);
 
-      // Use the unified productsProvider to create the product
-      await ref.read(productsProvider.notifier).createProduct(productData, imagePaths);
-      
-      // Refresh the seller's product list
-      ref.invalidate(sellerProductsProvider);
-
+    final state = ref.read(productControllerProvider);
+    if (state.status == ProductStatus.created) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Product published successfully! 🚀')),
         );
         context.pop();
       }
-    } catch (e) {
+    } else if (state.status == ProductStatus.error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to publish product: $e')),
+          SnackBar(content: Text(state.errorMessage ?? 'Failed to publish product')),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isPublishing = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = _isPublishing;
+    final productState = ref.watch(productControllerProvider);
+    final isLoading = productState.status == ProductStatus.creating;
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/seller'),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/seller'),
         ),
         title: Text('Add Product', style: AppTextStyles.h3),
         actions: [
@@ -123,8 +108,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             },
             child: Text(
               'Save Draft',
-              style:
-                  AppTextStyles.labelMedium.copyWith(color: AppColors.primary),
+              style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary),
             ),
           ),
           const SizedBox(width: 8),
@@ -157,24 +141,16 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.background,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: AppColors.border,
-                      width: 2,
-                      style: BorderStyle.solid),
+                  border: Border.all(color: AppColors.border, width: 2, style: BorderStyle.solid),
                 ),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.camera_alt,
-                          size: 32, color: AppColors.muted),
+                      const Icon(Icons.camera_alt, size: 32, color: AppColors.muted),
                       const SizedBox(height: 8),
-                      Text('Add Product Photos',
-                          style: AppTextStyles.labelLarge
-                              .copyWith(color: AppColors.muted)),
-                      Text('Tap to upload (up to 5 photos)',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: AppColors.muted)),
+                      Text('Add Product Photos', style: AppTextStyles.labelLarge.copyWith(color: AppColors.muted)),
+                      Text('Tap to upload (up to 5 photos)', style: AppTextStyles.bodySmall.copyWith(color: AppColors.muted)),
                     ],
                   ),
                 ),
@@ -195,8 +171,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: AppColors.border),
                       ),
-                      child:
-                          const Icon(Icons.add_a_photo, color: AppColors.muted),
+                      child: const Icon(Icons.add_a_photo, color: AppColors.muted),
                     ),
                   );
                 }
@@ -223,8 +198,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                             color: Colors.black54,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.close,
-                              size: 16, color: Colors.white),
+                          child: const Icon(Icons.close, size: 16, color: Colors.white),
                         ),
                       ),
                     ),
@@ -253,13 +227,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               children: [
                 Text(
                   'Add a product demo video',
-                  style: AppTextStyles.labelMedium
-                      .copyWith(color: AppColors.secondary),
+                  style: AppTextStyles.labelMedium.copyWith(color: AppColors.secondary),
                 ),
                 Text(
                   'Videos increase conversion by 3x! 🚀',
-                  style:
-                      AppTextStyles.bodySmall.copyWith(color: AppColors.muted),
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.muted),
                 ),
               ],
             ),
@@ -275,41 +247,24 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTextField(
-              'Product Name *', 'e.g. Silk Banarasi Saree', _nameController),
-          _buildDropdownField('Category *', [
-            'Fashion & Clothing',
-            'Organic & Natural',
-            'Food & Snacks',
-            'Jewellery'
-          ]),
+          _buildTextField('Product Name *', 'e.g. Silk Banarasi Saree', _nameController),
+          _buildDropdownField('Category *', ['Fashion & Clothing', 'Organic & Natural', 'Food & Snacks', 'Jewellery']),
           Row(
             children: [
-              Expanded(
-                  child: _buildTextField(
-                      'Price (₹) *', '1299', _priceController,
-                      keyboardType: TextInputType.number)),
+              Expanded(child: _buildTextField('Price (₹) *', '1299', _priceController, keyboardType: TextInputType.number)),
               const SizedBox(width: 12),
-              Expanded(
-                  child: _buildTextField('MRP (₹)', '2100', _oldPriceController,
-                      keyboardType: TextInputType.number)),
+              Expanded(child: _buildTextField('MRP (₹)', '2100', _oldPriceController, keyboardType: TextInputType.number)),
             ],
           ),
-          _buildTextField('Stock Quantity *', 'e.g. 50', _stockController,
-              keyboardType: TextInputType.number),
-          _buildTextField(
-              'Description', 'Describe your product...', _descriptionController,
-              maxLines: 4),
-          _buildTextField('Tags (comma-separated)', 'saree, handloom, silk',
-              _tagsController),
+          _buildTextField('Stock Quantity *', 'e.g. 50', _stockController, keyboardType: TextInputType.number),
+          _buildTextField('Description', 'Describe your product...', _descriptionController, maxLines: 4),
+          _buildTextField('Tags (comma-separated)', 'saree, handloom, silk', _tagsController),
         ],
       ),
     );
   }
 
-  Widget _buildTextField(
-      String label, String hint, TextEditingController controller,
-      {int maxLines = 1, TextInputType? keyboardType}) {
+  Widget _buildTextField(String label, String hint, TextEditingController controller, {int maxLines = 1, TextInputType? keyboardType}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -322,8 +277,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           style: AppTextStyles.bodyMedium.copyWith(color: AppColors.text),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle:
-                AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
+            hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
             filled: true,
             fillColor: AppColors.background,
             border: OutlineInputBorder(
@@ -334,8 +288,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: AppColors.border, width: 1.5),
             ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
         ),
         const SizedBox(height: 14),
@@ -411,8 +364,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               value: value,
               onChanged: (_) {},
               activeColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
             ),
           ),
           const SizedBox(width: 10),
@@ -425,7 +377,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   Widget _buildBottomButtons(BuildContext context, bool isLoading) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.card,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
@@ -437,12 +389,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.border, width: 2),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: Text('Preview',
-                  style:
-                      AppTextStyles.labelLarge.copyWith(color: AppColors.text)),
+              child: Text('Preview', style: AppTextStyles.labelLarge.copyWith(color: AppColors.text)),
             ),
           ),
           const SizedBox(width: 12),
@@ -451,16 +400,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               onPressed: isLoading ? null : _publishProduct,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('Publish Product'),
+              child: isLoading 
+                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text('Publish Product'),
             ),
           ),
         ],

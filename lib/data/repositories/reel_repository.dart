@@ -1,3 +1,6 @@
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../core/network/api_client.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../shared/models/reel.dart';
@@ -22,16 +25,11 @@ class ReelRepository {
 
   Future<void> uploadReel(XFile videoFile, String caption) async {
     try {
-      final bytes = await videoFile.readAsBytes();
-      
-      // Ensure the filename has an extension so Dio sends the correct content-type
-      String filename = videoFile.name;
-      if (filename.isEmpty || !filename.contains('.')) {
-        filename = 'upload.mp4';
-      }
-
       final formData = FormData.fromMap({
-        'video': MultipartFile.fromBytes(bytes, filename: filename),
+        'video': await MultipartFile.fromFile(
+          videoFile.path,
+          filename: videoFile.name,
+        ),
         'caption': caption,
       });
 

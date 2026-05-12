@@ -8,7 +8,7 @@ import '../../../shared/models/reel.dart';
 import '../../../shared/providers/repository_providers.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/constants/api_endpoints.dart';
-// Removed web-only imports to fix mobile build
+import 'package:flutter/foundation.dart';
 
 
 class ReelsScreen extends ConsumerStatefulWidget {
@@ -76,15 +76,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
             ),
           );
         },
-        data: (reels) => PageView.builder(
-          controller: _pageController,
-          scrollDirection: Axis.vertical,
-          itemCount: reels.length,
-          itemBuilder: (context, index) {
-            final reel = reels[index];
-            return _buildReelItem(reel);
-          },
-        ),
+
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
       ),
@@ -97,6 +89,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
         // Actual Video Player
         Positioned.fill(
           child: ReelVideoPlayer(videoUrl: reel.videoUrl, emoji: reel.emoji, isActive: isActive),
+        ),
         // Video Placeholder
         Container(
           width: double.infinity,
@@ -149,9 +142,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
                   _showComments(context, reel.id);
                 },
               ),
-              _buildReelAction(Icons.favorite, reel.likes.toString(), Colors.redAccent),
-              const SizedBox(height: 20),
-              _buildReelAction(Icons.chat_bubble, reel.comments.toString(), Colors.white),
               const SizedBox(height: 20),
               _buildReelAction(icon: Icons.share, label: 'Share', col: Colors.white, onTap: () {}),
               const SizedBox(height: 20),
@@ -336,14 +326,9 @@ class ReelVideoPlayer extends StatefulWidget {
 }
 
 class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
-  // Mobile only
   VideoPlayerController? _controller;
   bool _initialized = false;
   bool _error = false;
-
-  // Web only
-  late final String _viewId;
-  html.VideoElement? _webVideoElement;
 
   String get _resolvedUrl {
     final videoUrl = widget.videoUrl;
@@ -369,58 +354,14 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
   void didUpdateWidget(ReelVideoPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive != oldWidget.isActive) {
-      if (kIsWeb) {
+      if (_controller != null && _initialized) {
         if (widget.isActive) {
-          _webVideoElement?.play();
+          _controller!.play();
         } else {
-          _webVideoElement?.pause();
-        }
-      } else {
-        if (_controller != null && _initialized) {
-          if (widget.isActive) {
-            _controller!.play();
-          } else {
-            _controller!.pause();
-          }
+          _controller!.pause();
         }
       }
     }
-  }
-
-  void _registerWebVideo() {
-    final url = _resolvedUrl;
-    if (url.isEmpty) {
-      setState(() => _error = true);
-      return;
-    }
-
-    final videoEl = html.VideoElement()
-      ..src = url
-      ..autoplay = widget.isActive
-      ..loop = true
-      ..muted = false
-      ..controls = false
-      ..style.width = '100%'
-      ..style.height = '100%'
-      ..style.objectFit = 'cover'
-      ..style.pointerEvents = 'none' // Allow GestureDetector to handle taps on Web
-      ..setAttribute('playsinline', '')
-      ..setAttribute('crossorigin', 'anonymous');
-
-    _webVideoElement = videoEl;
-
-    videoEl.onError.listen((_) {
-      debugPrint('HTML video error for: $url');
-      if (mounted) setState(() => _error = true);
-    });
-    videoEl.onCanPlay.listen((_) {
-      if (widget.isActive) {
-        videoEl.play();
-      }
-    });
-
-    ui.platformViewRegistry.registerViewFactory(_viewId, (int id) => videoEl);
-    setState(() {});
   }
 
   Future<void> _initMobilePlayer() async {
@@ -467,57 +408,28 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
       );
     }
 
-    if (!kIsWeb && (!_initialized || _controller == null)) {
-
     if (!_initialized || _controller == null) {
       return const Center(child: CircularProgressIndicator(color: Colors.white));
     }
 
     return GestureDetector(
       onTap: () {
-        if (kIsWeb) {
-          if (_webVideoElement != null) {
-            if (_webVideoElement!.paused) {
-              _webVideoElement!.play();
-            } else {
-              _webVideoElement!.pause();
-            }
-          }
+        if (_controller!.value.isPlaying) {
+          _controller!.pause();
         } else {
-          if (_controller!.value.isPlaying) {
-            _controller!.pause();
-          } else {
-            _controller!.play();
-          }
+          _controller!.play();
         }
       },
       child: SizedBox.expand(
         child: FittedBox(
           fit: BoxFit.cover,
-          child: kIsWeb 
-            ? SizedBox(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
-                child: HtmlElementView(viewType: _viewId),
-              )
-            : SizedBox(
-                width: _controller!.value.size.width,
-                height: _controller!.value.size.height,
-                child: VideoPlayer(_controller!),
-              ),
+          child: SizedBox(
+            width: _controller!.value.size.width,
+            height: _controller!.value.size.height,
+            child: VideoPlayer(_controller!),
+          ),
         ),
       ),
-    );
-  }
-}
-
-  Widget _buildReelAction(IconData icon, String label, Color col) {
-    return Column(
-      children: [
-        Icon(icon, color: col, size: 30),
-        const SizedBox(height: 4),
-        Text(label, style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontSize: 11)),
-      ],
     );
   }
 }

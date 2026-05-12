@@ -49,10 +49,6 @@ class Reel {
       likes: likesCount,
       comments: commentsCount,
       emoji: sellerObj != null ? sellerObj['avatar'] : map['emoji'],
-      description: map['description'] ?? '',
-      likes: map['likes'] ?? 0,
-      comments: map['comments'] ?? 0,
-      emoji: map['emoji'],
     );
   }
 }

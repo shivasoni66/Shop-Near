@@ -8,9 +8,6 @@ import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/models/reel.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/foundation.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:ui_web' as ui;
 
 class SellerReelsScreen extends ConsumerWidget {
   const SellerReelsScreen({super.key});
@@ -277,30 +274,13 @@ class _MiniVideoPlayerState extends State<_MiniVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) {
-      _viewId = 'mini-reel-${widget.videoUrl.hashCode}-${DateTime.now().millisecondsSinceEpoch}';
-      final videoEl = html.VideoElement()
-        ..src = _resolvedUrl
-        ..autoplay = true
-        ..loop = true
-        ..muted = true // Mini player should be muted
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..style.objectFit = 'cover'
-        ..style.pointerEvents = 'none'
-        ..setAttribute('playsinline', '')
-        ..setAttribute('crossorigin', 'anonymous');
-
-      ui.platformViewRegistry.registerViewFactory(_viewId, (int id) => videoEl);
-    } else {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(_resolvedUrl))
-        ..initialize().then((_) {
-          _controller!.setLooping(true);
-          _controller!.setVolume(0.0); // Muted by default
-          _controller!.play();
-          if (mounted) setState(() => _initialized = true);
-        });
-    }
+    _controller = VideoPlayerController.networkUrl(Uri.parse(_resolvedUrl))
+      ..initialize().then((_) {
+        _controller!.setLooping(true);
+        _controller!.setVolume(0.0); // Muted by default
+        _controller!.play();
+        if (mounted) setState(() => _initialized = true);
+      });
   }
 
   @override
@@ -311,9 +291,6 @@ class _MiniVideoPlayerState extends State<_MiniVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return HtmlElementView(viewType: _viewId);
-    }
     if (!_initialized || _controller == null) {
       return Container(color: Colors.black26, child: const Center(child: CircularProgressIndicator()));
     }

@@ -1,9 +1,16 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/providers/reel_providers.dart';
 
-class PostReelScreen extends StatelessWidget {
+class PostReelScreen extends ConsumerStatefulWidget {
   const PostReelScreen({super.key});
 
   @override

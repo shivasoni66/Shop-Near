@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/discover/presentation/discover_screen.dart';
 import '../../features/discover/presentation/category_results_screen.dart';
 import '../../features/live/presentation/live_session_screen.dart';
+import '../../features/live/presentation/live_explorer_screen.dart';
+import '../../shared/models/live_session.dart';
 import '../../features/product/presentation/product_detail_screen.dart';
 import '../../features/product/presentation/enhanced_product_detail_screen.dart';
 import '../../features/product/presentation/custom_product_detail_screen.dart';
@@ -29,20 +32,50 @@ import '../../features/reels/presentation/post_reel_screen.dart';
 import '../../features/reels/presentation/reels_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/auth/providers/auth_notifier.dart';
 
 import '../../shared/widgets/app_bottom_nav.dart';
 import '../../shared/widgets/seller_bottom_nav.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<NavigatorState> _buyerShellNavigatorKey =
-    GlobalKey<NavigatorState>();
-final GlobalKey<NavigatorState> _sellerShellNavigatorKey =
-    GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _buyerShellNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _sellerShellNavigatorKey = GlobalKey<NavigatorState>();
 
-class AppRouter {
-  static final router = GoRouter(
+class AuthRefreshNotifier extends ChangeNotifier {
+  AuthRefreshNotifier(Ref ref) {
+    ref.listen(authControllerProvider, (_, __) => notifyListeners());
+  }
+}
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authControllerProvider);
+
+  return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
+    refreshListenable: AuthRefreshNotifier(ref),
+    redirect: (context, state) {
+      final status = authState.status;
+      final user = authState.user;
+
+      if (status == AuthStatus.initial || status == AuthStatus.loading) {
+        return null;
+      }
+
+      final isLoggingIn = state.uri.path == '/login' || state.uri.path == '/register' || state.uri.path == '/';
+
+      if (status == AuthStatus.authenticated) {
+        if (isLoggingIn) {
+          return user?.role == 'seller' ? '/seller' : '/home';
+        }
+      } else if (status == AuthStatus.unauthenticated || status == AuthStatus.error) {
+        if (!isLoggingIn) {
+          return '/';
+        }
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/',
@@ -56,7 +89,6 @@ class AppRouter {
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
       ),
-<<<<<<< HEAD
       // Live explorer — buyer browses active sessions
       GoRoute(
         path: '/home/live',
@@ -70,13 +102,6 @@ class AppRouter {
         builder: (context, state) => LiveSessionScreen(
           session: state.extra as LiveSession?,
         ),
-=======
-      // Live session is full screen, so outside the shell
-      GoRoute(
-        path: '/home/live',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const LiveSessionScreen(),
->>>>>>> 67fcff4c26272895d83d411068e57d0f5fd53d2b
       ),
       GoRoute(
         path: '/home/product/:id',
@@ -134,12 +159,6 @@ class AppRouter {
           productId: state.uri.queryParameters['product'],
         ),
       ),
-<<<<<<< HEAD
-
-=======
-      
->>>>>>> 67fcff4c26272895d83d411068e57d0f5fd53d2b
-      // Buyer Shell Route
       ShellRoute(
         navigatorKey: _buyerShellNavigatorKey,
         builder: (context, state, child) {
@@ -177,8 +196,6 @@ class AppRouter {
           ),
         ],
       ),
-
-      // Seller Shell Route
       ShellRoute(
         navigatorKey: _sellerShellNavigatorKey,
         builder: (context, state, child) {
@@ -206,12 +223,6 @@ class AppRouter {
           ),
         ],
       ),
-<<<<<<< HEAD
-
-=======
-      
->>>>>>> 67fcff4c26272895d83d411068e57d0f5fd53d2b
-      // Seller full screen routes
       GoRoute(
         path: '/seller/products/add',
         parentNavigatorKey: _rootNavigatorKey,
@@ -229,4 +240,4 @@ class AppRouter {
       ),
     ],
   );
-}
+});

@@ -7,6 +7,7 @@ class Product {
   final double rating;
   final int reviewsCount;
   final int soldCount;
+  final int stockCount;
   final String imagePlaceholder; // Emoji
   final List<String> tags;
   final String description;
@@ -21,6 +22,7 @@ class Product {
     required this.rating,
     this.reviewsCount = 0,
     this.soldCount = 0,
+    this.stockCount = 0,
     required this.imagePlaceholder,
     this.tags = const [],
     this.description = '',
@@ -38,6 +40,7 @@ class Product {
         rating: double.tryParse((map['rating'] ?? 0).toString()) ?? 0.0,
         reviewsCount: int.tryParse((map['reviewsCount'] ?? 0).toString()) ?? 0,
         soldCount: int.tryParse((map['soldCount'] ?? 0).toString()) ?? 0,
+        stockCount: int.tryParse((map['stockCount'] ?? map['stock'] ?? 0).toString()) ?? 0,
         imagePlaceholder: (map['images'] is List && (map['images'] as List).isNotEmpty) 
           ? map['images'][0].toString() 
           : (map['imagePlaceholder']?.toString() ?? '📦'),

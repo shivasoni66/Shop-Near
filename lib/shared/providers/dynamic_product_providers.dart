@@ -38,6 +38,7 @@ Product _enhanceProductWithSellerInfo(Product baseProduct, String productId) {
     rating: sellerInfo['rating'],
     reviewsCount: sellerInfo['reviewsCount'],
     soldCount: sellerInfo['soldCount'],
+    stockCount: baseProduct.stockCount,
     imagePlaceholder: baseProduct.imagePlaceholder,
     tags: baseProduct.tags,
     description: _enhanceDescription(baseProduct.description, sellerInfo),

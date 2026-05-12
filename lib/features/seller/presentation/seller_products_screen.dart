@@ -127,9 +127,9 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
       itemBuilder: (context, index) {
         final product = products[index];
         return _buildProductItem(
-          product.imagePlaceholder ?? '📦',
+          product.imagePlaceholder,
           product.name,
-          'Stock: ${product.soldCount} · ⭐ ${product.rating}',
+          'Stock: ${product.stockCount} · ⭐ ${product.rating}',
           '₹${product.price}',
         );
       },

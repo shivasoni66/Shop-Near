@@ -15,18 +15,31 @@ router.get('/', async (req, res) => {
 });
 
 // Post reel (Seller only)
-router.post('/', auth, upload.single('video'), async (req, res) => {
+router.post('/', auth, (req, res, next) => {
+  upload.single('video')(req, res, (err) => {
+    if (err) {
+      console.error('Multer/Cloudinary Error:', err);
+      return res.status(500).json({ error: err.message || 'Upload failed', details: err });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     // Temporarily allow anyone to post reels for testing purposes
     // if (req.user.role !== 'seller') return res.status(403).json({ message: 'Only sellers can post reels' });
 
+    console.log('Post Reel Request Received');
+    console.log('File:', req.file);
+    console.log('Body:', req.body);
+
     if (!req.file) {
+      console.log('Error: No file in request');
       return res.status(400).json({ message: 'No video file uploaded' });
     }
 
     // multer-storage-cloudinary sets req.file.path to the Cloudinary secure URL
     const videoUrl = req.file.path;
-    if (req.user.role !== 'seller') return res.status(403).json({ message: 'Only sellers can post reels' });
+    // if (req.user.role !== 'seller') return res.status(403).json({ message: 'Only sellers can post reels' });
 
     const reel = new Reel({
       seller: req.user.id,
@@ -49,6 +62,7 @@ router.post('/', auth, upload.single('video'), async (req, res) => {
     
     res.status(201).json(reel);
   } catch (err) {
+    console.error('Reel Upload Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

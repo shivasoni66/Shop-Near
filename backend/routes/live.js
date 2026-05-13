@@ -4,12 +4,29 @@ const LiveSession = require('../models/LiveSession');
 const auth = require('../middleware/auth');
 const { upload } = require('../config/cloudinary');
 
-// Get all live sessions (Only active ones)
+// Get all live sessions (With auto-cleanup for ghost sessions)
 router.get('/', async (req, res) => {
   try {
+    // Auto-end sessions that are older than 1 hour (ghost sessions)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    await LiveSession.updateMany(
+      { isLive: true, createdAt: { $lt: oneHourAgo } },
+      { $set: { isLive: false, endedAt: Date.now() } }
+    );
+
     const sessions = await LiveSession.find({ isLive: true })
       .populate('seller', 'name avatar');
     res.json(sessions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin cleanup route to clear all live sessions manually
+router.get('/cleanup-all-force', async (req, res) => {
+  try {
+    await LiveSession.updateMany({}, { $set: { isLive: false, endedAt: Date.now() } });
+    res.json({ message: 'All sessions marked as ended' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

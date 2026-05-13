@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shop_near/shared/providers/cart_providers.dart';
 import 'package:shop_near/shared/providers/repository_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -181,29 +182,71 @@ class _CustomProductDetailScreenState
                   height: double.infinity,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFECD2), Color(0xFFFCB69F)],
+                    gradient: LinearGradient(
+                      colors: [
+                        _getDynamicColor(product.name),
+                        _getDynamicColor(product.name).withOpacity(0.6),
+                      ],
                     ),
                   ),
-                  child: Center(
-                    child: product.imagePlaceholder.startsWith('http')
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              product.imagePlaceholder,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.broken_image, size: 50, color: Colors.white54),
-                            ),
-                          )
-                        : Text(
-                            product.imagePlaceholder,
-                            style: const TextStyle(fontSize: 80),
-                          ),
-                  ),
+                  child: product.images.isNotEmpty
+                      ? PageView.builder(
+                          itemCount: product.images.length,
+                          itemBuilder: (context, index) {
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                product.images[index],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.broken_image, size: 50, color: Colors.white54),
+                              ),
+                            );
+                          },
+                        )
+                      : Center(
+                          child: product.imagePlaceholder.startsWith('http')
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(
+                                    product.imagePlaceholder,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Icon(Icons.broken_image, size: 50, color: Colors.white54),
+                                  ),
+                                )
+                              : Text(
+                                  product.imagePlaceholder,
+                                  style: const TextStyle(fontSize: 80),
+                                ),
+                        ),
                 ),
+                // Indicator for multiple images
+                if (product.images.length > 1)
+                  Positioned(
+                    bottom: 12,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        product.images.length,
+                        (index) => Container(
+                          width: 6,
+                          height: 6,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 // Like option on top right of image
                 Positioned(
                   top: 8,
@@ -674,10 +717,21 @@ class _CustomProductDetailScreenState
           // 2. Add to Cart
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (!isAddedToCart) {
-                  setState(() => isAddedToCart = true);
-                  _showAddedToCartPopup();
+                  try {
+                    await ref.read(cartProvider.notifier).addItem(product.id, 1);
+                    setState(() => isAddedToCart = true);
+                    if (mounted) {
+                      _showAddedToCartPopup();
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to add to cart: $e'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(

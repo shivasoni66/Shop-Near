@@ -126,20 +126,17 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
       itemCount: products.length,
       itemBuilder: (context, index) {
         final product = products[index];
-        return _buildProductItem(
-          product.imagePlaceholder,
-          product.name,
-          'Stock: ${product.stock} · Sold: ${product.soldCount} · ⭐ ${product.rating}',
-          '₹${product.price}',
-          isOutOfStock: product.stock == 0,
-        );
+        return _buildProductItem(product);
       },
     );
   }
 
-  Widget _buildProductItem(String icon, String name, String meta, String price, {bool isDraft = false, bool isOutOfStock = false}) {
+  Widget _buildProductItem(Product product, {bool isDraft = false}) {
+    final bool isOutOfStock = product.stock == 0;
+    final String image = product.images.isNotEmpty ? product.images[0] : product.imagePlaceholder;
+
     return GestureDetector(
-      onTap: () => context.push('/home/product/1'),
+      onTap: () => context.push('/seller/product/${product.id}'),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.all(12),
@@ -154,7 +151,7 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
         child: Row(
           children: [
             Hero(
-              tag: 'product_img_${name.hashCode}',
+              tag: 'product_img_${product.id}',
               child: Container(
                 width: 56,
                 height: 56,
@@ -163,11 +160,11 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
-                child: icon.startsWith('http')
+                child: image.startsWith('http')
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.network(
-                        icon,
+                        image,
                         width: 56,
                         height: 56,
                         fit: BoxFit.cover,
@@ -175,7 +172,7 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
                           const Icon(Icons.broken_image, size: 24, color: Colors.white54),
                       ),
                     )
-                  : Text(icon, style: const TextStyle(fontSize: 28, decoration: TextDecoration.none)),
+                  : Text(image, style: const TextStyle(fontSize: 28, decoration: TextDecoration.none)),
               ),
             ),
             const SizedBox(width: 12),
@@ -183,14 +180,14 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: AppTextStyles.labelLarge.copyWith(color: isDraft ? AppColors.muted : AppColors.text)),
+                  Text(product.name, style: AppTextStyles.labelLarge.copyWith(color: isDraft ? AppColors.muted : AppColors.text)),
                   Text(
-                    meta,
+                    'Stock: ${product.stock} · Sold: ${product.soldCount} · ⭐ ${product.rating}',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: isOutOfStock ? AppColors.danger : AppColors.muted,
                     ),
                   ),
-                  Text(price, style: AppTextStyles.h4.copyWith(color: isDraft ? AppColors.muted : AppColors.text)),
+                  Text('₹${product.price}', style: AppTextStyles.h4.copyWith(color: isDraft ? AppColors.muted : AppColors.text)),
                 ],
               ),
             ),
@@ -224,7 +221,7 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
                           ),
                           child: Text(
                             'Restock',
-                            style: AppTextStyles.labelSmall.copyWith(color: const Color(0xFF1E40AF), fontSize: 11, fontWeight: FontWeight.w800),
+                            style: AppTextStyles.labelSmall.copyWith(color: const Color(0xFF1E40AF), fontSize: 11, fontWeight: FontWeight.w900),
                           ),
                         ),
                       ),
@@ -271,3 +268,4 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
     );
   }
 }
+

@@ -8,10 +8,12 @@ class Product {
   final int reviewsCount;
   final int soldCount;
   final int stock;
+  final List<String> images;
   final String imagePlaceholder; // Emoji
   final List<String> tags;
   final String description;
   final String category;
+  final String? sellerId;
 
   const Product({
     required this.id,
@@ -23,10 +25,12 @@ class Product {
     this.reviewsCount = 0,
     this.soldCount = 0,
     this.stock = 0,
+    this.images = const [],
     required this.imagePlaceholder,
     this.tags = const [],
     this.description = '',
     this.category = 'All',
+    this.sellerId,
   });
 
   factory Product.fromMap(Map<String, dynamic> map) {
@@ -41,12 +45,14 @@ class Product {
         reviewsCount: int.tryParse((map['reviewsCount'] ?? 0).toString()) ?? 0,
         soldCount: int.tryParse((map['soldCount'] ?? 0).toString()) ?? 0,
         stock: int.tryParse((map['stock'] ?? 0).toString()) ?? 0,
+        images: map['images'] is List ? List<String>.from(map['images'].map((e) => e.toString())) : const [],
         imagePlaceholder: (map['images'] is List && (map['images'] as List).isNotEmpty) 
           ? map['images'][0].toString() 
           : (map['imagePlaceholder']?.toString() ?? '📦'),
         tags: map['tags'] is List ? List<String>.from(map['tags'].map((e) => e.toString())) : const [],
         description: map['description']?.toString() ?? '',
         category: map['category']?.toString() ?? 'All',
+        sellerId: (map['seller'] is Map ? map['seller']['_id'] : null) ?? map['sellerId']?.toString(),
       );
     } catch (e) {
       print('Error parsing product: $e');

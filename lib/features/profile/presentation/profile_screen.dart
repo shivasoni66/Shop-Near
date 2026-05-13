@@ -30,6 +30,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
     _animController.forward();
+    
+    // Refresh data when profile is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(userOrdersProvider);
+      ref.invalidate(userWishlistProvider);
+    });
   }
 
   @override
@@ -325,7 +331,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               itemCount: products.length,
               itemBuilder: (context, index) {
                 final product = products[index];
-                return _buildGridItem(context, product.id, product.name[0], [const Color(0xFFFFECD2), const Color(0xFFFCB69F)]);
+                return _buildGridItem(context, product.id, product.name, product.images.isNotEmpty ? product.images[0] : product.imagePlaceholder);
               },
             );
           },
@@ -353,6 +359,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 Color statusColor = AppColors.accent;
                 if (order.status == 'Delivered') statusColor = AppColors.success;
                 if (order.status == 'Packing') statusColor = AppColors.primary;
+                if (order.status == 'Out for Delivery') statusColor = Colors.indigo;
                 
                 return _buildOrderListItem(
                   context, 
@@ -470,16 +477,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     );
   }
 
-  Widget _buildGridItem(BuildContext context, String productId, String label, List<Color> gradient) {
+  Widget _buildGridItem(BuildContext context, String productId, String label, String? imageUrl) {
     return GestureDetector(
       onTap: () => context.push('/home/product/$productId'),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          color: AppColors.card,
+          border: Border.all(color: AppColors.border),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2))],
         ),
-        alignment: Alignment.center,
-        child: Text(label, style: const TextStyle(fontSize: 34, color: Colors.white, fontWeight: FontWeight.bold)),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (imageUrl != null && imageUrl.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(color: AppColors.border),
+                errorWidget: (context, url, error) => Container(
+                  color: const Color(0xFFFFECD2),
+                  alignment: Alignment.center,
+                  child: Text(label[0], style: const TextStyle(fontSize: 34, color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              )
+            else
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(colors: [Color(0xFFFFECD2), Color(0xFFFCB69F)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                ),
+                alignment: Alignment.center,
+                child: Text(label[0], style: const TextStyle(fontSize: 34, color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                color: Colors.black.withOpacity(0.5),
+                child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, 
+                    style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -536,7 +577,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     child: ElevatedButton(
                       onPressed: () async {
                         await ref.read(authControllerProvider.notifier).logout();
-                        if (context.mounted) {
+                        if (mounted) {
                           context.go('/login');
                         }
                       },

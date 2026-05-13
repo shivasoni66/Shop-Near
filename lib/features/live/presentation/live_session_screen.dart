@@ -31,12 +31,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
   final math.Random _random = math.Random();
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<Map<String, dynamic>> _chatMessages = [
-    {'user': 'Anjali', 'msg': 'Love this collection! 😍'},
-    {'user': 'Rohit K', 'msg': 'What\'s the price for blue one?'},
-    {'user': 'Priya', 'msg': '₹1,299 only! Limited stock!', 'isSeller': true},
-    {'user': 'Meena', 'msg': 'Can I get COD option? 🙏'},
-  ];
+  final List<Map<String, dynamic>> _chatMessages = [];
   @override
   void initState() {
     super.initState();

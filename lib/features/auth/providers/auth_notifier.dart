@@ -103,8 +103,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await _ref.read(authRepositoryProvider).logout();
+    await _storage.delete(key: 'jwt_token');
+    await _storage.delete(key: 'user_role');
     state = AuthState.unauthenticated();
+  }
+
+  void clearError() {
+    if (state.status == AuthStatus.error) {
+      state = AuthState(status: AuthStatus.initial, user: state.user);
+    }
   }
 }
 

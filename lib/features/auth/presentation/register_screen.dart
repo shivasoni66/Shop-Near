@@ -15,22 +15,33 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String _role = 'buyer'; // default role
+  bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(authControllerProvider.notifier).clearError());
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
-      return;
-    }
 
     await ref.read(authControllerProvider.notifier).register({
       'name': name,
@@ -39,15 +50,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       'role': _role,
     });
 
-    final authState = ref.read(authControllerProvider);
-    if (authState.status == AuthStatus.error) {
-      if (mounted) {
+    if (mounted) {
+      final authState = ref.read(authControllerProvider);
+      if (authState.status == AuthStatus.error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authState.errorMessage ?? 'Registration failed')),
+          SnackBar(
+            content: Text(authState.errorMessage ?? 'Registration failed'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-      }
-    } else if (authState.status == AuthStatus.authenticated) {
-      if (mounted) {
+      } else if (authState.status == AuthStatus.authenticated) {
         if (_role == 'seller') {
           context.go('/seller');
         } else {
@@ -83,99 +96,121 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 constraints: BoxConstraints(
                   maxWidth: isDesktop ? 450 : double.infinity,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-                      onPressed: () => context.pop(),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Create Account',
-                      style: AppTextStyles.h1.copyWith(
-                        color: Colors.white,
-                        fontSize: isDesktop ? 40 : 32,
-                        fontWeight: FontWeight.bold,
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        onPressed: () {
+                          ref.read(authControllerProvider.notifier).clearError();
+                          context.pop();
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Join ShopNear and support local businesses',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: Colors.white70,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    _buildTextField(
-                      controller: _nameController,
-                      hint: 'Full Name',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      controller: _emailController,
-                      hint: 'Email Address',
-                      icon: Icons.email_outlined,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      controller: _passwordController,
-                      hint: 'Password',
-                      icon: Icons.lock_outline,
-                      isPassword: true,
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      'I am a:',
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _buildRoleChip('buyer', '🛍️ Buyer')),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildRoleChip('seller', '🏪 Seller')),
-                      ],
-                    ),
-                    const SizedBox(height: 48),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 60,
-                      child: ElevatedButton(
-                        onPressed: isLoading ? null : _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 8,
-                          shadowColor: AppColors.primary.withOpacity(0.4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Create Account',
+                        style: AppTextStyles.h1.copyWith(
+                          color: Colors.white,
+                          fontSize: isDesktop ? 40 : 32,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -1,
                         ),
-                        child: isLoading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 3,
-                                ),
-                              )
-                            : const Text(
-                                'Register',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'Join ShopNear and support local businesses',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.white70,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      _buildTextField(
+                        controller: _nameController,
+                        hint: 'Full Name',
+                        icon: Icons.person_outline_rounded,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Please enter your name';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _emailController,
+                        hint: 'Email Address',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Please enter your email';
+                          if (!value.contains('@')) return 'Please enter a valid email';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _passwordController,
+                        hint: 'Password',
+                        icon: Icons.lock_outline_rounded,
+                        isPassword: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Please enter a password';
+                          if (value.length < 6) return 'Password must be at least 6 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                      Text(
+                        'I am a:',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(child: _buildRoleChip('buyer', '🛍️ Buyer')),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildRoleChip('seller', '🏪 Seller')),
+                        ],
+                      ),
+                      const SizedBox(height: 48),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 60,
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : _register,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 8,
+                            shadowColor: AppColors.primary.withOpacity(0.4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : const Text(
+                                  'Register',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -193,8 +228,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? AppColors.primary : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.white.withOpacity(0.1),
             width: 2,
@@ -226,34 +261,48 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required String hint,
     required IconData icon,
     bool isPassword = false,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
-    return Container(
-      height: 64,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: TextField(
-        controller: controller,
-        obscureText: isPassword,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-          prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.5), size: 22),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18),
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword && _obscurePassword,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: const TextStyle(color: Colors.white, fontSize: 16),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.5), size: 22),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  color: Colors.white.withOpacity(0.3),
+                  size: 20,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              )
+            : null,
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.danger, width: 1),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
       ),
     );
   }

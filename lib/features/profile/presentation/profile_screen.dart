@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/user_providers.dart';
 import '../../../shared/models/user.dart';
+import '../../auth/providers/auth_notifier.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -483,8 +484,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        context.go('/login');
+                      onPressed: () async {
+                        await ref.read(authControllerProvider.notifier).logout();
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,

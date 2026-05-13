@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const { upload } = require('../config/cloudinary');
 const Review = require('../models/Review');
 const Order = require('../models/Order');
+const Product = require('../models/Product');
 
 // Get current user profile
 router.get('/', auth, async (req, res) => {
@@ -81,8 +82,10 @@ router.put('/', auth, upload.single('avatar'), async (req, res) => {
 router.get('/wishlist', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate('wishlist');
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user.wishlist || []);
   } catch (err) {
+    console.error('Wishlist Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -93,6 +96,7 @@ router.get('/reviews', auth, async (req, res) => {
     const reviews = await Review.find({ user: req.user.id }).populate('product');
     res.json(reviews);
   } catch (err) {
+    console.error('Reviews Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

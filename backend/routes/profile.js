@@ -115,4 +115,15 @@ router.get('/reviews', auth, async (req, res) => {
   }
 });
 
+// Get user orders
+router.get('/orders', auth, async (req, res) => {
+  try {
+    const orders = await Order.find({ buyer: req.user.id }).populate('items.product');
+    res.json(orders);
+  } catch (err) {
+    console.error('Orders Fetch Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

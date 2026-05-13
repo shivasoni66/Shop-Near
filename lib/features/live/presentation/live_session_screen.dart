@@ -270,6 +270,9 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authControllerProvider).user;
+    final isOwner = user?.id == widget.session?.sellerId;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -331,20 +334,30 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                           ],
                         ),
                       const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(16)),
-                        child: Text('Follow',
-                            style: AppTextStyles.labelSmall
-                                .copyWith(color: Colors.white)),
-                      ),
+                      if (!isOwner) 
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(16)),
+                          child: Text('Follow',
+                              style: AppTextStyles.labelSmall
+                                  .copyWith(color: Colors.white)),
+                        ),
                     ],
                   ),
                 ),
                 const Spacer(),
+                if (isOwner)
+                  Row(
+                    children: [
+                      _buildHeaderCircle(Icons.flip_camera_ios, () => _engine?.switchCamera()),
+                      const SizedBox(width: 8),
+                      _buildHeaderCircle(Icons.mic, () => _engine?.muteLocalAudioStream(true)),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
                 const LiveBadge(pulse: true),
               ],
             ),
@@ -364,21 +377,22 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                 const SizedBox(height: 10),
                 _buildReactBtn('😍'),
                 const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () => context.push('/home/cart'),
-                  child: Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      border: Border.all(color: Colors.white.withOpacity(0.25)),
-                      shape: BoxShape.circle,
+                if (!isOwner)
+                  GestureDetector(
+                    onTap: () => context.push('/home/cart'),
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        border: Border.all(color: Colors.white.withOpacity(0.25)),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.shopping_bag_outlined,
+                          color: Colors.white, size: 20),
                     ),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.shopping_bag_outlined,
-                        color: Colors.white, size: 20),
                   ),
-                ),
               ],
             ),
           ),
@@ -405,8 +419,9 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
           ),
 
           // Live Product Bar
-          Positioned(
-            bottom: 136,
+          if (!isOwner)
+            Positioned(
+              bottom: 136,
             left: 14,
             right: 70,
             child: Container(
@@ -524,6 +539,18 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderCircle(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+            color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }

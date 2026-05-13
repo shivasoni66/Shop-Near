@@ -19,7 +19,7 @@ class LiveCardsRowWidget extends ConsumerWidget {
       child: Row(
         children: sessions.map((session) {
           return GestureDetector(
-            onTap: () => context.push('/home/live'),
+            onTap: () => context.push('/home/live-session', extra: session),
             child: Container(
               width: 136,
               height: 178,

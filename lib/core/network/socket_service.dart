@@ -15,6 +15,8 @@ class SocketService {
   }
 
   Future<void> connect() async {
+    if (_socket != null && _socket!.connected) return;
+    
     final token = await _storage.read(key: 'jwt_token');
     
     // Use OptionBuilder for better type safety and configuration

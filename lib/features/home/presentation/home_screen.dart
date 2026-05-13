@@ -44,6 +44,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final socketService = ref.read(socketServiceProvider);
       socketService.connect();
+      
+      // Remove old listeners to avoid duplicates
+      socketService.off('live_update');
+      socketService.off('new_reel');
+
       socketService.on('live_update', (data) {
         ref.invalidate(liveSessionsProvider);
       });

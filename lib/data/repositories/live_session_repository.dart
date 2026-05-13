@@ -50,4 +50,12 @@ class LiveSessionRepository {
       rethrow;
     }
   }
+
+  Future<void> endLiveSession(String sessionId) async {
+    try {
+      await _apiClient.put('${ApiEndpoints.live}/$sessionId/end');
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

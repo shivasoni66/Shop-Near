@@ -206,6 +206,13 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
   void dispose() {
     _chatController.dispose();
     _scrollController.dispose();
+    
+    // If user is seller, notify backend that live ended
+    final user = ref.read(authControllerProvider).user;
+    if (user?.role == 'seller' && widget.session != null) {
+      ref.read(liveSessionRepositoryProvider).endLiveSession(widget.session!.id);
+    }
+    
     _engine?.leaveChannel();
     _engine?.release();
     super.dispose();

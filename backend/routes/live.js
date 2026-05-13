@@ -34,8 +34,11 @@ router.post('/', auth, upload.single('thumbnail'), async (req, res) => {
     
     await session.save();
     
+    // Populate seller for the broadcast
+    const populatedSession = await LiveSession.findById(session._id).populate('seller', 'name avatar');
+    
     // Broadcast to all users that a new live session started
-    req.io.emit('live_update', { action: 'started', sessionId: session._id });
+    req.io.emit('live_update', { action: 'started', session: populatedSession });
     
     res.status(201).json(session);
   } catch (err) {

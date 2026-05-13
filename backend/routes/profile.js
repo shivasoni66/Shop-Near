@@ -106,7 +106,9 @@ router.get('/wishlist', auth, async (req, res) => {
 router.get('/reviews', auth, async (req, res) => {
   try {
     const reviews = await Review.find({ user: req.user.id }).populate('product');
-    res.json(reviews);
+    // Filter out reviews where the product was deleted
+    const validReviews = (reviews || []).filter(rev => rev.product != null);
+    res.json(validReviews);
   } catch (err) {
     console.error('Reviews Error:', err);
     res.status(500).json({ error: err.message });

@@ -45,7 +45,19 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
 
   Future<void> _initAgora() async {
     // retrieve permissions
-    await [Permission.microphone, Permission.camera].request();
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.microphone,
+      Permission.camera,
+    ].request();
+
+    if (statuses[Permission.camera] != PermissionStatus.granted ||
+        statuses[Permission.microphone] != PermissionStatus.granted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Camera and Microphone permissions are required for Live Stream')),
+        );
+      }
+    }
 
     //create the engine
     _engine = createAgoraRtcEngine();
@@ -87,6 +99,15 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
     await _engine!.enableVideo();
     if (isBroadcaster) {
       await _engine!.startPreview();
+    }
+
+    // Explicitly unmute for broadcaster
+    if (isBroadcaster) {
+      await _engine!.muteLocalAudioStream(false);
+      await _engine!.muteLocalVideoStream(false);
+    } else {
+      await _engine!.muteAllRemoteAudioStreams(false);
+      await _engine!.muteAllRemoteVideoStreams(false);
     }
 
     final sellerUid = 1;

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -127,18 +128,28 @@ class _SellerOrdersScreenState extends ConsumerState<SellerOrdersScreen> with Si
           order.id,
           order.productPlaceholder,
           order.productName,
-          '#${order.id.substring(order.id.length - 4)}',
+          '#${order.id.substring(order.id.length - math.min(4, order.id.length))}',
           '${order.buyerName} · ₹${order.amount.toInt()} · ${order.paymentMethod}',
-          '${order.status}',
+          order.status,
           statusBg,
           statusText,
-          showAccept: order.status == 'Pending',
+          status: order.status,
         );
       },
     );
   }
 
-  Widget _buildOrderCard(String id, String icon, String name, String orderId, String buyerDetails, String status, Color statusBg, Color statusText, {bool showAccept = false}) {
+  Widget _buildOrderCard(
+    String id, 
+    String icon, 
+    String name, 
+    String orderId, 
+    String buyerDetails, 
+    String statusLabel, 
+    Color statusBg, 
+    Color statusText, 
+    {required String status}
+  ) {
     return GestureDetector(
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -194,42 +205,53 @@ class _SellerOrdersScreenState extends ConsumerState<SellerOrdersScreen> with Si
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    status,
+                    statusLabel,
                     style: AppTextStyles.labelSmall.copyWith(color: statusText, fontWeight: FontWeight.w800, fontSize: 11),
                   ),
                 ),
-                if (showAccept)
+                if (status == 'Pending' || status == 'Packing')
                   Padding(
-                    padding: const EdgeInsets.only(top: 5),
+                    padding: const EdgeInsets.only(top: 8),
                     child: GestureDetector(
                       onTap: () async {
                         try {
                           final repository = ref.read(orderRepositoryProvider);
-                          await repository.updateOrderStatus(id, 'Packing');
+                          final nextStatus = status == 'Pending' ? 'Packing' : 'Delivered';
+                          await repository.updateOrderStatus(id, nextStatus);
                           ref.invalidate(sellerOrdersProvider);
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Order $orderId accepted! 📦'), backgroundColor: AppColors.success),
+                              SnackBar(
+                                content: Text('Order $orderId ${status == 'Pending' ? 'Accepted' : 'Delivered'}! 📦'),
+                                backgroundColor: AppColors.success,
+                              ),
                             );
                           }
                         } catch (e) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to update status: $e'), backgroundColor: AppColors.primary),
+                              SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.primary),
                             );
                           }
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.secondary.withOpacity(0.1),
-                          border: Border.all(color: AppColors.secondary, width: 1.5),
+                          color: status == 'Pending' ? AppColors.secondary.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                          border: Border.all(
+                            color: status == 'Pending' ? AppColors.secondary : AppColors.success, 
+                            width: 1.5
+                          ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'Accept',
-                          style: AppTextStyles.labelSmall.copyWith(color: AppColors.secondary, fontWeight: FontWeight.w800, fontSize: 10),
+                          status == 'Pending' ? 'Accept' : 'Mark Delivered',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: status == 'Pending' ? AppColors.secondary : AppColors.success, 
+                            fontWeight: FontWeight.w800, 
+                            fontSize: 10
+                          ),
                         ),
                       ),
                     ),

@@ -20,6 +20,8 @@ class OrderRepository {
     }
   }
 
+  Future<List<Order>> getBuyerOrders() => getOrders();
+
   Future<Order> placeOrder(Map<String, dynamic> orderData) async {
     try {
       final response = await _apiClient.post(ApiEndpoints.orders, data: orderData);

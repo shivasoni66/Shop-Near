@@ -8,21 +8,20 @@ import '../../../shared/providers/user_providers.dart';
 import '../../../shared/providers/seller_providers.dart';
 import '../../../shared/providers/order_providers.dart';
 import '../../../shared/models/user.dart';
-import '../../auth/providers/auth_notifier.dart';
 
-class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+class SellerProfileScreen extends ConsumerStatefulWidget {
+  const SellerProfileScreen({super.key});
 
   @override
-  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<SellerProfileScreen> createState() => _SellerProfileScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen>
+class _SellerProfileScreenState extends ConsumerState<SellerProfileScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   int _activeTabIndex = 0;
-  final List<String> _tabs = ['Wishlist', 'Orders'];
+  final List<String> _tabs = ['Wishlist', 'Orders', 'Reviews', 'Badges'];
 
   @override
   void initState() {
@@ -91,28 +90,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 Positioned(
                   top: 14, right: 14,
                   child: SafeArea(
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => context.push('/home/settings'),
-                          child: Container(
-                            width: 38, height: 38,
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.settings_outlined, color: Colors.white, size: 18),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: _showLogoutDialog,
-                          child: Container(
-                            width: 38, height: 38,
-                            decoration: BoxDecoration(color: Colors.red.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
-                          ),
-                        ),
-                      ],
+                    child: GestureDetector(
+                      onTap: () => context.push('/home/settings'),
+                      child: Container(
+                        width: 38, height: 38,
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.settings_outlined, color: Colors.white, size: 18),
+                      ),
                     ),
                   ),
                 ),
@@ -186,9 +171,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         _buildDivider(),
                         _buildStat('4.8', 'Rating', null),
                       ] else ...[
-                        _buildStat(user.ordersCount.toString(), 'Orders', 1),
+                        _buildStat(ref.watch(sellerOrdersProvider).value?.length.toString() ?? '0', 'Orders', 1),
                         _buildDivider(),
-                        _buildStat(user.followingCount.toString(), 'Following', null),
+                        _buildStat('128', 'Following', null),
+                        _buildDivider(),
+                        _buildStat('34', 'Reviews', 2),
                       ],
                     ],
                   ),
@@ -198,7 +185,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => context.push('/home/profile/edit'),
+                        onPressed: () => context.push('/seller/profile/edit'),
                         icon: const Icon(Icons.edit, size: 16, color: Colors.white),
                         label: Text('Edit Profile', style: AppTextStyles.labelMedium.copyWith(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
                         style: ElevatedButton.styleFrom(
@@ -212,9 +199,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     const SizedBox(width: 10),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => context.go('/seller'),
-                        icon: const Icon(Icons.storefront, size: 16, color: AppColors.text),
-                        label: Text('Seller Mode', style: AppTextStyles.labelMedium.copyWith(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w800)),
+                        onPressed: () => context.go('/home'),
+                        icon: const Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.text),
+                        label: Text('Buyer Mode', style: AppTextStyles.labelMedium.copyWith(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w800)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           side: const BorderSide(color: AppColors.border, width: 1.5),
@@ -255,12 +242,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('${user.points} pts', style: AppTextStyles.h1.copyWith(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900)),
-                Text('${2000 - user.points > 0 ? 2000 - user.points : 0} pts away from Gold tier 🥇', style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withOpacity(0.85), fontSize: 12)),
+                Text('1,240 pts', style: AppTextStyles.h1.copyWith(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900)),
+                Text('260 pts away from Gold tier 🥇', style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withOpacity(0.85), fontSize: 12)),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(value: (user.points / 2000).clamp(0.0, 1.0), backgroundColor: Colors.white.withOpacity(0.25), valueColor: const AlwaysStoppedAnimation<Color>(Colors.white), minHeight: 7),
+                  child: LinearProgressIndicator(value: 0.82, backgroundColor: Colors.white.withOpacity(0.25), valueColor: const AlwaysStoppedAnimation<Color>(Colors.white), minHeight: 7),
                 ),
               ],
             ),
@@ -273,12 +260,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                Expanded(child: GestureDetector(onTap: () => setState(() => _activeTabIndex = 1), child: _buildQuickCard(Icons.local_shipping_outlined, 'Orders', '${user.ordersCount} items', AppColors.secondary))),
+                Expanded(child: GestureDetector(onTap: () => setState(() => _activeTabIndex = 1), child: _buildQuickCard(Icons.local_shipping_outlined, 'Orders', '${ref.watch(sellerOrdersProvider).value?.length ?? 0} items', AppColors.secondary))),
                 const SizedBox(width: 10),
-                if (user.role == 'seller')
-                  Expanded(child: GestureDetector(onTap: () => context.go('/seller'), child: _buildQuickCard(Icons.dashboard_outlined, 'Dashboard', 'Seller Panel', AppColors.primary)))
-                else
-                  Expanded(child: GestureDetector(onTap: () => setState(() => _activeTabIndex = 0), child: _buildQuickCard(Icons.favorite_border, 'Wishlist', '${user.wishlistCount} items', AppColors.primary))),
+                Expanded(child: GestureDetector(onTap: () => context.go('/seller'), child: _buildQuickCard(Icons.dashboard_outlined, 'Dashboard', 'Seller Panel', AppColors.primary))),
               ],
             ),
           ),
@@ -306,76 +290,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Widget _buildTabContent() {
     switch (_activeTabIndex) {
       case 0:
-        final wishlistAsync = ref.watch(userWishlistProvider);
-        return wishlistAsync.when(
-          data: (products) {
-            if (products.isEmpty) {
-              return const Center(child: Padding(padding: EdgeInsets.all(32.0), child: Text('Wishlist is empty! ❤️')));
-            }
-            return GridView.builder(
-              key: const ValueKey(0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-              ),
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return _buildGridItem(context, product.id, product.name[0], [const Color(0xFFFFECD2), const Color(0xFFFCB69F)]);
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
-        );
+        return GridView.count(key: const ValueKey(0), crossAxisCount: 3, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.symmetric(horizontal: 16), mainAxisSpacing: 12, crossAxisSpacing: 12, children: [
+          _buildGridItem(context, '👗', const [Color(0xFFFFECD2), Color(0xFFFCB69F)]),
+          _buildGridItem(context, '🌿', const [Color(0xFFA8EDEA), Color(0xFFFED6E3)]),
+          _buildGridItem(context, '🎨', const [Color(0xFFD4FC79), Color(0xFF96E6A1)]),
+          _buildGridItem(context, '💍', const [Color(0xFFF7797D), Color(0xFFFBD786)]),
+          _buildGridItem(context, '📱', const [Color(0xFF667EEA), Color(0xFF764BA2)]),
+          _buildGridItem(context, '🎀', const [Color(0xFFf093fb), Color(0xFFf5576c)]),
+        ]);
       case 1:
-        final ordersAsync = ref.watch(userOrdersProvider);
-        return ordersAsync.when(
-          data: (orders) {
-            if (orders.isEmpty) {
-              return const Center(child: Padding(
-                padding: EdgeInsets.all(32.0),
-                child: Text('No orders yet! 🛍️'),
-              ));
-            }
-            return ListView.builder(
-              key: const ValueKey(1),
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: orders.length,
-              itemBuilder: (context, index) {
-                final order = orders[index];
-                Color statusColor = AppColors.accent;
-                if (order.status == 'Delivered') statusColor = AppColors.success;
-                if (order.status == 'Packing') statusColor = AppColors.primary;
-                
-                return _buildOrderListItem(
-                  context, 
-                  order.productName, 
-                  '#${order.id.length > 6 ? order.id.substring(order.id.length - 6) : order.id}', 
-                  order.status, 
-                  statusColor,
-                  order.id,
-                );
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
-        );
+        return ListView(key: const ValueKey(1), shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.symmetric(horizontal: 16), children: [
+          _buildOrderListItem(context, 'Silk Saree Blue', '#BL2048', 'Pending', AppColors.accent),
+          _buildOrderListItem(context, 'Banarasi Dupatta', '#BL2047', 'Delivered', AppColors.success),
+          _buildOrderListItem(context, 'Cotton Kurti Set', '#BL2046', 'Delivered', AppColors.success),
+        ]);
+      case 2:
+        return ListView(key: const ValueKey(2), shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.symmetric(horizontal: 16), children: [
+          _buildReviewItem('Priya Fashion', 'Great quality saree! The fabric is very soft and the color is exactly as shown in the live session.', 5),
+          _buildReviewItem('Green Bazaar', 'Fresh organic honey. Delivery was quick and packaging was eco-friendly.', 4),
+        ]);
+      case 3:
+        return GridView.count(key: const ValueKey(3), crossAxisCount: 4, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.symmetric(horizontal: 16), mainAxisSpacing: 10, crossAxisSpacing: 10, children: [
+          _buildBadgeItem('🌟', 'Top Buyer'), _buildBadgeItem('🔥', 'Early Adopter'), _buildBadgeItem('🤝', 'Local Supporter'), _buildBadgeItem('💎', 'Premium'),
+        ]);
       default:
         return const SizedBox();
     }
   }
 
-  Widget _buildOrderListItem(BuildContext context, String name, String idLabel, String status, Color color, String orderId) {
+  Widget _buildOrderListItem(BuildContext context, String name, String id, String status, Color color) {
     return GestureDetector(
-      onTap: () => context.push('/home/order-track?orderId=$orderId'),
+      onTap: () => context.push('/home/order-track'),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border),
@@ -383,7 +328,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         child: Row(children: [
           Container(width: 44, height: 44, decoration: BoxDecoration(gradient: LinearGradient(colors: [AppColors.secondary.withOpacity(0.1), AppColors.secondary.withOpacity(0.05)]), borderRadius: BorderRadius.circular(12)), alignment: Alignment.center, child: const Text('🛍️', style: TextStyle(fontSize: 20))),
           const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w800, color: AppColors.text)), Text(idLabel, style: AppTextStyles.bodySmall.copyWith(color: AppColors.muted))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w800, color: AppColors.text)), Text(id, style: AppTextStyles.bodySmall.copyWith(color: AppColors.muted))])),
           Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
             child: Text(status, style: AppTextStyles.labelSmall.copyWith(color: color, fontWeight: FontWeight.w900))),
         ]),
@@ -470,91 +415,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     );
   }
 
-  Widget _buildGridItem(BuildContext context, String productId, String label, List<Color> gradient) {
+  Widget _buildGridItem(BuildContext context, String emoji, List<Color> gradient) {
     return GestureDetector(
-      onTap: () => context.push('/home/product/$productId'),
+      onTap: () => context.push('/home/product/1'),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
         ),
         alignment: Alignment.center,
-        child: Text(label, style: const TextStyle(fontSize: 34, color: Colors.white, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10))
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.logout_rounded, color: Colors.red, size: 32),
-              ),
-              const SizedBox(height: 20),
-              Text('Logout', style: AppTextStyles.h2.copyWith(fontSize: 22)),
-              const SizedBox(height: 12),
-              Text(
-                'Are you sure you want to sign out from Shop-Near?',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text('Cancel', style: AppTextStyles.labelLarge.copyWith(color: AppColors.muted)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await ref.read(authControllerProvider.notifier).logout();
-                        if (context.mounted) {
-                          context.go('/login');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        child: Text(emoji, style: const TextStyle(fontSize: 34)),
       ),
     );
   }

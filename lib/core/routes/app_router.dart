@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/onboarding/presentation/splash_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/discover/presentation/discover_screen.dart';
 import '../../features/discover/presentation/category_results_screen.dart';
@@ -14,6 +15,7 @@ import '../../features/product/presentation/enhanced_product_detail_screen.dart'
 import '../../features/product/presentation/custom_product_detail_screen.dart';
 import '../../features/shop/presentation/shop_page_screen.dart';
 import '../../features/cart/presentation/cart_screen.dart';
+import '../../features/cart/presentation/checkout_screen.dart';
 import '../../features/chat/presentation/chat_list_screen.dart';
 import '../../features/chat/presentation/chat_detail_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -23,6 +25,7 @@ import '../../features/order_tracking/presentation/order_tracking_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 
 import '../../features/seller/presentation/seller_dashboard_screen.dart';
+import '../../features/seller/presentation/seller_profile_screen.dart';
 import '../../features/seller/presentation/seller_products_screen.dart';
 import '../../features/seller/presentation/seller_orders_screen.dart';
 import '../../features/seller/presentation/seller_analytics_screen.dart';
@@ -53,17 +56,27 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/',
+    initialLocation: '/splash',
     refreshListenable: AuthRefreshNotifier(ref),
     redirect: (context, state) {
       final status = authState.status;
       final user = authState.user;
 
       if (status == AuthStatus.initial || status == AuthStatus.loading) {
-        return null;
+        return state.uri.path == '/splash' ? null : '/splash';
       }
 
+      final isSplash = state.uri.path == '/splash';
+
       final isLoggingIn = state.uri.path == '/login' || state.uri.path == '/register' || state.uri.path == '/';
+
+      if (isSplash && status != AuthStatus.initial && status != AuthStatus.loading) {
+        if (status == AuthStatus.authenticated) {
+          return user?.role == 'seller' ? '/seller' : '/home';
+        } else {
+          return '/';
+        }
+      }
 
       if (status == AuthStatus.authenticated) {
         if (isLoggingIn) {
@@ -78,6 +91,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/',
         builder: (context, state) => const OnboardingScreen(),
@@ -109,6 +126,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => CustomProductDetailScreen(
           productId: state.pathParameters['id'],
+        ),
+      ),
+      GoRoute(
+        path: '/home/checkout/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => CheckoutScreen(
+          productId: state.pathParameters['id'] ?? '',
         ),
       ),
       GoRoute(
@@ -221,6 +245,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/seller/analytics',
             builder: (context, state) => const SellerAnalyticsScreen(),
+          ),
+          GoRoute(
+            path: '/seller/profile',
+            builder: (context, state) => const SellerProfileScreen(),
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (context, state) => const ProfileEditScreen(),
+              ),
+            ],
           ),
         ],
       ),

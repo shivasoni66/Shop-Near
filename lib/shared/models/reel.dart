@@ -7,6 +7,7 @@ class Reel {
   final int likes;
   final int comments;
   final String? emoji;
+  final List<String> likesList; // List of user IDs who liked
 
   Reel({
     required this.id,
@@ -17,14 +18,18 @@ class Reel {
     required this.likes,
     required this.comments,
     this.emoji,
+    this.likesList = const <String>[],
   });
 
   factory Reel.fromMap(Map<String, dynamic> map) {
     // Backend populates 'seller' with { _id, name, avatar }
     final sellerObj = map['seller'] is Map ? map['seller'] : null;
-    final sellerId = sellerObj != null ? (sellerObj['_id'] ?? '') : (map['sellerId'] ?? '');
-    final sellerName = sellerObj != null ? (sellerObj['name'] ?? '') : (map['sellerName'] ?? '');
-    
+    final sellerId =
+        sellerObj != null ? (sellerObj['_id'] ?? '') : (map['sellerId'] ?? '');
+    final sellerName = sellerObj != null
+        ? (sellerObj['name'] ?? '')
+        : (map['sellerName'] ?? '');
+
     // likes from backend is an array of object IDs
     int likesCount = 0;
     if (map['likes'] is List) {
@@ -49,6 +54,9 @@ class Reel {
       likes: likesCount,
       comments: commentsCount,
       emoji: map['emoji'] ?? (sellerObj != null ? sellerObj['avatar'] : null),
+      likesList: map['likes'] is List 
+          ? (map['likes'] as List).map((e) => e.toString()).toList() 
+          : <String>[],
     );
   }
 }

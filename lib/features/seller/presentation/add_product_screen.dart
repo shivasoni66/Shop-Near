@@ -27,12 +27,82 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Add Photo', style: AppTextStyles.h4),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildPickerOption(
+                  icon: Icons.camera_alt_outlined,
+                  label: 'Camera',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFromCamera();
+                  },
+                ),
+                _buildPickerOption(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Gallery',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFromGallery();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickFromCamera() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      setState(() {
+        _selectedImages.add(image);
+      });
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
     final List<XFile> images = await _picker.pickMultiImage();
     if (images.isNotEmpty) {
       setState(() {
         _selectedImages.addAll(images);
       });
     }
+  }
+
+  Widget _buildPickerOption({required IconData icon, required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 30),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: AppTextStyles.labelMedium),
+        ],
+      ),
+    );
   }
 
   void _removeImage(int index) {
@@ -69,6 +139,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     final imagePaths = _selectedImages.map((e) => e.path).toList();
 
     await ref.read(productControllerProvider.notifier).createProduct(productData, imagePaths);
+    
+    if (!mounted) return;
 
     final state = ref.read(productControllerProvider);
     if (state.status == ProductStatus.created) {

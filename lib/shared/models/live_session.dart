@@ -6,6 +6,7 @@ class LiveSession {
   final String category;
   final int viewers;
   final String thumbnailPlaceholder;
+  final bool isLive;
 
   const LiveSession({
     required this.id,
@@ -15,6 +16,7 @@ class LiveSession {
     required this.category,
     required this.viewers,
     required this.thumbnailPlaceholder,
+    this.isLive = true,
   });
 
   factory LiveSession.fromMap(Map<String, dynamic> map) {
@@ -35,8 +37,9 @@ class LiveSession {
       sellerName: sName,
       title: map['title'] ?? '',
       category: map['category'] ?? '',
-      viewers: map['viewers'] ?? 0,
+      viewers: map['viewers'] ?? map['viewersCount'] ?? 0,
       thumbnailPlaceholder: map['thumbnailPlaceholder'] ?? '📺',
+      isLive: map['isLive'] == true || map['isLive'] == null, 
     );
   }
 }

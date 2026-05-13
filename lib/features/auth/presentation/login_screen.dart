@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../shared/providers/repository_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../providers/auth_providers.dart';
 import '../providers/auth_notifier.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -95,16 +93,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         ),
         child: SafeArea(
           child: Center(
-            child: FadeTransition(
-              opacity: _fadeAnim,
-              child: SlideTransition(
-                position: _slideAnim,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 450 : double.infinity,
-                    ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 450 : double.infinity,
+                ),
+                child: FadeTransition(
+                  opacity: _fadeAnim,
+                  child: SlideTransition(
+                    position: _slideAnim,
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -166,7 +164,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                             isPassword: true,
                             validator: (value) {
                               if (value == null || value.isEmpty) return 'Please enter your password';
-                              if (value.length < 6) return 'Password must be at least 6 characters';
                               return null;
                             },
                           ),
@@ -177,10 +174,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                               onPressed: () {},
                               child: Text(
                                 'Forgot Password?',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.primary.withOpacity(0.8),
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: TextStyle(color: AppColors.primary.withOpacity(0.8), fontWeight: FontWeight.w600),
                               ),
                             ),
                           ),
@@ -213,30 +207,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        letterSpacing: 1,
                                       ),
                                     ),
                             ),
                           ),
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Don\'t have an account? ',
-                                style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withOpacity(0.5)),
+                                "Don't have an account? ",
+                                style: TextStyle(color: Colors.white.withOpacity(0.6)),
                               ),
                               TextButton(
                                 onPressed: () {
                                   ref.read(authControllerProvider.notifier).clearError();
                                   context.push('/register');
                                 },
-                                child: Text(
+                                child: const Text(
                                   'Register Now',
-                                  style: AppTextStyles.bodySmall.copyWith(
+                                  style: TextStyle(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
                                   ),
                                 ),
                               ),

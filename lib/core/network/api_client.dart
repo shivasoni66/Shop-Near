@@ -7,6 +7,7 @@ class ApiClient {
     baseUrl: ApiEndpoints.baseUrl,
     connectTimeout: const Duration(seconds: 60),
     receiveTimeout: const Duration(seconds: 60),
+    sendTimeout: const Duration(seconds: 60),
   ));
   final _storage = const FlutterSecureStorage();
 

@@ -20,19 +20,24 @@ class UserRepository {
     }
   }
 
-  Future<User> updateProfile(Map<String, dynamic> data, {String? imagePath}) async {
+  Future<User> updateProfile(Map<String, dynamic> data,
+      {String? imagePath}) async {
     try {
       dynamic requestData;
       if (imagePath != null) {
         requestData = FormData.fromMap({
           ...data,
-          'avatar': await MultipartFile.fromFile(imagePath),
+          'avatar': await MultipartFile.fromFile(
+            imagePath,
+            filename: imagePath.split(RegExp(r'[/\\]')).last,
+          ),
         });
       } else {
         requestData = data;
       }
 
-      final response = await _apiClient.put(ApiEndpoints.profile, data: requestData);
+      final response =
+          await _apiClient.put(ApiEndpoints.profile, data: requestData);
       if (response.statusCode == 200) {
         return User.fromMap(response.data);
       }

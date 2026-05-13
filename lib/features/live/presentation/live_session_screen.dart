@@ -21,8 +21,9 @@ class LiveSessionScreen extends ConsumerStatefulWidget {
   ConsumerState<LiveSessionScreen> createState() => _LiveSessionScreenState();
 }
 
-class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with TickerProviderStateMixin {
-  late RtcEngine _engine;
+class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
+    with TickerProviderStateMixin {
+  RtcEngine? _engine;
   bool _localUserJoined = false;
   bool _isJoined = false;
   int? _remoteUid;
@@ -48,33 +49,29 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
 
     //create the engine
     _engine = createAgoraRtcEngine();
-    await _engine.initialize(const RtcEngineContext(
+    await _engine!.initialize(const RtcEngineContext(
       appId: AgoraConfig.appId,
       channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
     ));
 
-    _engine.registerEventHandler(
+    _engine!.registerEventHandler(
       RtcEngineEventHandler(
         onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
           debugPrint("local user ${connection.localUid} joined");
-          setState(() {
-            _localUserJoined = true;
-          });
+          if (mounted) setState(() => _localUserJoined = true);
         },
         onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
           debugPrint("remote user $remoteUid joined");
-          setState(() {
-            _remoteUid = remoteUid;
-          });
+          if (mounted) setState(() => _remoteUid = remoteUid);
         },
-        onUserOffline: (RtcConnection connection, int remoteUid, UserOfflineReasonType reason) {
+        onUserOffline: (RtcConnection connection, int remoteUid,
+            UserOfflineReasonType reason) {
           debugPrint("remote user $remoteUid left channel");
-          setState(() {
-            _remoteUid = null;
-          });
+          if (mounted) setState(() => _remoteUid = null);
         },
         onTokenPrivilegeWillExpire: (RtcConnection connection, String token) {
-          debugPrint('[onTokenPrivilegeWillExpire] connection: ${connection.toJson()}, token: $token');
+          debugPrint(
+              '[onTokenPrivilegeWillExpire] connection: ${connection.toJson()}, token: $token');
         },
       ),
     );
@@ -82,19 +79,31 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
     final user = ref.read(authControllerProvider).user;
     final isBroadcaster = user?.role == 'seller';
 
-    await _engine.setClientRole(
-      role: isBroadcaster ? ClientRoleType.clientRoleBroadcaster : ClientRoleType.clientRoleAudience,
+    await _engine!.setClientRole(
+      role: isBroadcaster
+          ? ClientRoleType.clientRoleBroadcaster
+          : ClientRoleType.clientRoleAudience,
     );
-    await _engine.enableVideo();
-    await _engine.startPreview();
+    await _engine!.enableVideo();
+    if (isBroadcaster) {
+      await _engine!.startPreview();
+    }
 
-    await _engine.joinChannel(
+    await _engine!.joinChannel(
       token: AgoraConfig.token,
       channelId: widget.session?.id ?? 'demo_channel',
-      uid: 0,
-      options: const ChannelMediaOptions(),
+      uid: isBroadcaster ? 1 : 0, // Seller is always UID 1
+      options: ChannelMediaOptions(
+        clientRoleType: isBroadcaster 
+            ? ClientRoleType.clientRoleBroadcaster 
+            : ClientRoleType.clientRoleAudience,
+        publishCameraTrack: isBroadcaster,
+        publishMicrophoneTrack: isBroadcaster,
+        autoSubscribeAudio: true,
+        autoSubscribeVideo: true,
+      ),
     );
-    setState(() => _isJoined = true);
+    if (mounted) setState(() => _isJoined = true);
 
     // Socket Interactions
     _setupSocket();
@@ -140,7 +149,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
 
   void _addHeart(String emoji) {
     _showHeartAnimation(emoji);
-    
+
     // Broadcast reaction
     final socketService = ref.read(socketServiceProvider);
     socketService.emit('live_reaction', {
@@ -168,7 +177,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
 
   void _sendChatMessage() {
     if (_chatController.text.trim().isEmpty) return;
-    
+
     final user = ref.read(authControllerProvider).user;
     final msg = _chatController.text.trim();
     final isSeller = user?.role == 'seller';
@@ -197,20 +206,24 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
   void dispose() {
     _chatController.dispose();
     _scrollController.dispose();
-    _engine.leaveChannel();
-    _engine.release();
+    _engine?.leaveChannel();
+    _engine?.release();
     super.dispose();
   }
 
   Widget _videoView() {
+    if (_engine == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final user = ref.read(authControllerProvider).user;
     final isBroadcaster = user?.role == 'seller';
 
     if (isBroadcaster) {
       return AgoraVideoView(
         controller: VideoViewController(
-          rtcEngine: _engine,
-          canvas: const VideoCanvas(uid: 0),
+          rtcEngine: _engine!,
+          canvas: const VideoCanvas(uid: 0), // local preview
         ),
       );
     }
@@ -218,9 +231,10 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
     if (_remoteUid != null) {
       return AgoraVideoView(
         controller: VideoViewController.remote(
-          rtcEngine: _engine,
+          rtcEngine: _engine!,
           canvas: VideoCanvas(uid: _remoteUid),
-          connection: RtcConnection(channelId: widget.session?.id ?? 'demo_channel'),
+          connection:
+              RtcConnection(channelId: widget.session?.id ?? 'demo_channel'),
         ),
       );
     } else {
@@ -238,7 +252,8 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
             children: [
               Text('⌛', style: TextStyle(fontSize: 60)),
               SizedBox(height: 10),
-              Text('Waiting for seller to start...', style: TextStyle(color: Colors.white, fontSize: 16)),
+              Text('Waiting for seller to start...',
+                  style: TextStyle(color: Colors.white, fontSize: 16)),
             ],
           ),
         ),
@@ -259,7 +274,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
 
           // Floating Hearts Layer
           ..._floatingHearts,
-          
+
           // Header
           Positioned(
             top: 50,
@@ -277,30 +292,47 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                   },
                   child: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
-                    child: const Icon(Icons.close, color: Colors.white, size: 20),
+                    decoration: BoxDecoration(
+                        color: Colors.black45,
+                        borderRadius: BorderRadius.circular(20)),
+                    child:
+                        const Icon(Icons.close, color: Colors.white, size: 20),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(30)),
+                  decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(30)),
                   child: Row(
                     children: [
-                      const CircleAvatar(radius: 16, backgroundColor: Colors.white, child: Text('👗')),
+                      const CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.white,
+                          child: Text('👗')),
                       const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Priya Fashion', style: AppTextStyles.labelMedium.copyWith(color: Colors.white)),
-                          Text('1.2k viewers', style: AppTextStyles.labelSmall.copyWith(color: Colors.white70)),
-                        ],
-                      ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(widget.session?.sellerName ?? 'Seller',
+                                style: AppTextStyles.labelMedium
+                                    .copyWith(color: Colors.white)),
+                            Text('${widget.session?.viewers ?? 0} viewers',
+                                style: AppTextStyles.labelSmall
+                                    .copyWith(color: Colors.white70)),
+                          ],
+                        ),
                       const SizedBox(width: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(16)),
-                        child: Text('Follow', style: AppTextStyles.labelSmall.copyWith(color: Colors.white)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(16)),
+                        child: Text('Follow',
+                            style: AppTextStyles.labelSmall
+                                .copyWith(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -310,7 +342,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
               ],
             ),
           ),
-          
+
           // Reactions Side
           Positioned(
             right: 14,
@@ -336,13 +368,14 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
+                    child: const Icon(Icons.shopping_bag_outlined,
+                        color: Colors.white, size: 20),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           // Chat Area
           Positioned(
             bottom: 210,
@@ -357,12 +390,13 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                 final chat = _chatMessages[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: _buildChatBubble(chat['user'], chat['msg'], isSeller: chat['isSeller'] ?? false),
+                  child: _buildChatBubble(chat['user'], chat['msg'],
+                      isSeller: chat['isSeller'] ?? false),
                 );
               },
             ),
           ),
-          
+
           // Live Product Bar
           Positioned(
             bottom: 136,
@@ -382,36 +416,51 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                     height: 46,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      gradient: const LinearGradient(colors: [Color(0xFFFFECD2), Color(0xFFFCB69F)]),
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFFFFECD2), Color(0xFFFCB69F)]),
                     ),
                     alignment: Alignment.center,
                     child: const Text('👗', style: TextStyle(fontSize: 24)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Silk Saree — Royal Blue', style: AppTextStyles.labelMedium.copyWith(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
-                        Text('₹1,299', style: AppTextStyles.labelMedium.copyWith(color: AppColors.accent, fontSize: 14, fontWeight: FontWeight.w900)),
-                      ],
-                    ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.session?.title ?? 'Special Offer',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800)),
+                          Text('₹1,299',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                  color: AppColors.accent,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900)),
+                        ],
+                      ),
                   ),
                   ElevatedButton(
                     onPressed: () => context.push('/home/cart'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                       minimumSize: Size.zero,
                     ),
-                    child: Text('Buy Now', style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                    child: Text('Buy Now',
+                        style: AppTextStyles.labelSmall.copyWith(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800)),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // Live Input Area
           Positioned(
             bottom: 0,
@@ -429,15 +478,19 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.14),
-                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.2)),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: TextField(
                         controller: _chatController,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 14),
                         decoration: InputDecoration(
                           hintText: 'Say something...',
-                          hintStyle: AppTextStyles.bodyMedium.copyWith(color: Colors.white.withOpacity(0.45), fontSize: 13),
+                          hintStyle: AppTextStyles.bodyMedium.copyWith(
+                              color: Colors.white.withOpacity(0.45),
+                              fontSize: 13),
                           border: InputBorder.none,
                         ),
                         onSubmitted: (_) => _sendChatMessage(),
@@ -455,7 +508,8 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(Icons.send, color: Colors.white, size: 16),
+                      child:
+                          const Icon(Icons.send, color: Colors.white, size: 16),
                     ),
                   ),
                 ],
@@ -494,9 +548,17 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> with Tick
       child: RichText(
         text: TextSpan(
           text: '$user: ',
-          style: AppTextStyles.labelMedium.copyWith(color: isSeller ? AppColors.accent : Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+          style: AppTextStyles.labelMedium.copyWith(
+              color: isSeller ? AppColors.accent : Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800),
           children: [
-            TextSpan(text: msg, style: AppTextStyles.bodySmall.copyWith(color: Colors.white, fontSize: 12, fontWeight: FontWeight.normal)),
+            TextSpan(
+                text: msg,
+                style: AppTextStyles.bodySmall.copyWith(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.normal)),
           ],
         ),
       ),
@@ -508,13 +570,15 @@ class _FloatingHeart extends StatefulWidget {
   final String emoji;
   final Function(Key?) onComplete;
 
-  const _FloatingHeart({super.key, required this.emoji, required this.onComplete});
+  const _FloatingHeart(
+      {super.key, required this.emoji, required this.onComplete});
 
   @override
   State<_FloatingHeart> createState() => _FloatingHeartState();
 }
 
-class _FloatingHeartState extends State<_FloatingHeart> with SingleTickerProviderStateMixin {
+class _FloatingHeartState extends State<_FloatingHeart>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late double _left;
   late double _size;

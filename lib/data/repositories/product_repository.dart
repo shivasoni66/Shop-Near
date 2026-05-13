@@ -8,9 +8,15 @@ class ProductRepository {
 
   ProductRepository(this._apiClient);
 
-  Future<List<Product>> getAllProducts() async {
+  Future<List<Product>> getAllProducts({String? category, String? query}) async {
     try {
-      final response = await _apiClient.get(ApiEndpoints.products);
+      final response = await _apiClient.get(
+        ApiEndpoints.products,
+        queryParameters: {
+          if (category != null) 'category': category,
+          if (query != null) 'query': query,
+        },
+      );
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data;
         return data.map((item) => Product.fromMap(item)).toList();
@@ -33,19 +39,35 @@ class ProductRepository {
     }
   }
 
-  Future<Product> createProduct(Map<String, dynamic> data, List<String> imagePaths) async {
+  Future<Product> createProduct(
+      Map<String, dynamic> data, List<String> imagePaths) async {
     try {
-      final Map<String, dynamic> formDataMap = {...data};
-      
-      final List<MultipartFile> files = [];
+      final List<MapEntry<String, MultipartFile>> files = [];
       for (String path in imagePaths) {
-        files.add(await MultipartFile.fromFile(path));
+        final fileName = path.split('/').last;
+        files.add(MapEntry(
+          'images', 
+          await MultipartFile.fromFile(path, filename: fileName)
+        ));
       }
-      formDataMap['images'] = files;
 
-      final formData = FormData.fromMap(formDataMap);
+      final formData = FormData();
       
-      final response = await _apiClient.post(ApiEndpoints.products, data: formData);
+      // Add regular fields
+      data.forEach((key, value) {
+        if (value is List) {
+          // Join lists (like tags) into comma-separated strings for the backend
+          formData.fields.add(MapEntry(key, value.join(',')));
+        } else {
+          formData.fields.add(MapEntry(key, value.toString()));
+        }
+      });
+      
+      // Add images
+      formData.files.addAll(files);
+
+      final response =
+          await _apiClient.post(ApiEndpoints.products, data: formData);
       if (response.statusCode == 201) {
         return Product.fromMap(response.data);
       }

@@ -6,8 +6,9 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/section_header.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../shared/providers/order_providers.dart';
 import '../../../shared/providers/user_providers.dart';
+import '../../../shared/providers/seller_providers.dart';
+import '../../../shared/providers/order_providers.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/models/order.dart';
 import '../../../shared/models/user.dart';
@@ -60,12 +61,23 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
               loading: () => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
               error: (err, stack) => _buildHeader(context, null),
             ),
-            _buildStatsGrid(context),
-            const SectionHeader(
-              title: '📊 Weekly Revenue',
-              actionText: '23% vs last week',
+            ref.watch(sellerAnalyticsProvider).when(
+              data: (stats) => Column(
+                children: [
+                  _buildStatsGrid(context, stats),
+                  const SectionHeader(
+                    title: '📈 Weekly Revenue',
+                    actionText: 'Live tracking',
+                  ),
+                  _buildRevenueChart(stats),
+                ],
+              ),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: CircularProgressIndicator(),
+              ),
+              error: (err, stack) => _buildStatsGrid(context, null),
             ),
-            _buildRevenueChart(),
             const SectionHeader(title: 'Quick Actions'),
             _buildQuickActions(context),
             SectionHeader(
@@ -139,6 +151,8 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
               ),
               Row(
                 children: [
+                  _buildHeaderIcon(Icons.person_outline, () => context.push('/seller/profile')),
+                  const SizedBox(width: 8),
                   _buildHeaderIcon(Icons.notifications_none, () => context.push('/home/notifications')),
                   const SizedBox(width: 8),
                   _buildHeaderIcon(Icons.settings_outlined, () => context.push('/home/settings')),
@@ -167,18 +181,22 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context) {
+  Widget _buildStatsGrid(BuildContext context, Map<String, dynamic>? stats) {
+    final revenue = stats?['totalRevenue'] ?? 0;
+    final orders = stats?['totalOrders'] ?? 0;
+    final pending = stats?['pendingOrders'] ?? 0;
+
     return Transform.translate(
       offset: const Offset(0, -36),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            Expanded(child: _buildStatCard(context, '₹24K', 'Today', Icons.trending_up, Colors.green)),
+            Expanded(child: _buildStatCard(context, '₹${revenue >= 1000 ? "${(revenue/1000).toStringAsFixed(1)}K" : revenue}', 'Revenue', Icons.trending_up, Colors.green)),
             const SizedBox(width: 10),
-            Expanded(child: _buildStatCard(context, '18', 'Orders', Icons.shopping_bag_outlined, AppColors.primary)),
+            Expanded(child: _buildStatCard(context, orders.toString(), 'Orders', Icons.shopping_bag_outlined, AppColors.primary)),
             const SizedBox(width: 10),
-            Expanded(child: _buildStatCard(context, '342', 'Viewers', Icons.visibility_outlined, AppColors.accent)),
+            Expanded(child: _buildStatCard(context, pending.toString(), 'Pending', Icons.hourglass_empty, AppColors.accent)),
           ],
         ),
       ),
@@ -221,9 +239,20 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
     );
   }
 
-  Widget _buildRevenueChart() {
-    final List<double> heights = [0.38, 0.62, 0.48, 0.82, 0.68, 0.91, 0.74];
-    final List<String> days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  Widget _buildRevenueChart(Map<String, dynamic>? stats) {
+    final List<dynamic> dailyData = stats?['dailyRevenue'] ?? [];
+    if (dailyData.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppColors.border)),
+        child: const Center(child: Text('No revenue data yet 📊')),
+      );
+    }
+
+    final maxVal = dailyData.map((e) => (e['amount'] as num).toDouble()).reduce((a, b) => a > b ? a : b);
+    final List<double> heights = dailyData.map((e) => maxVal > 0 ? (e['amount'] as num).toDouble() / maxVal : 0.05).toList();
+    final List<String> days = dailyData.map((e) => e['day'].toString().substring(0, 1)).toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -299,19 +328,19 @@ class _SellerDashboardScreenState extends ConsumerState<SellerDashboardScreen>
           ),
           _buildActionBtn(
             context,
-            Icons.add_circle_outline,
+            Icons.video_call_rounded,
             AppColors.secondary,
-            'Add Product',
-            'List new item',
-            () => context.push('/seller/products/add'),
+            'Make Reels',
+            'Capture video',
+            () => context.push('/seller/post-reel?source=camera'),
           ),
           _buildActionBtn(
             context,
-            Icons.video_camera_back_outlined,
+            Icons.add_shopping_cart_rounded,
             AppColors.accent,
-            'Post Reel',
-            'Short video',
-            () => context.push('/seller/post-reel'),
+            'Add Product',
+            'List new item',
+            () => context.push('/seller/products/add'),
           ),
           _buildActionBtn(
             context,

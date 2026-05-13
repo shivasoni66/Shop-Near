@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../core/network/api_client.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../shared/models/live_session.dart';
@@ -20,12 +22,26 @@ class LiveSessionRepository {
     }
   }
 
-  Future<LiveSession> startLiveSession(String title, String category) async {
+  Future<LiveSession> startLiveSession(String title, String category, {String? thumbnailPath}) async {
     try {
-      final response = await _apiClient.post(ApiEndpoints.live, data: {
-        'title': title,
-        'category': category,
-      });
+      dynamic requestData;
+      if (thumbnailPath != null) {
+        requestData = FormData.fromMap({
+          'title': title,
+          'category': category,
+          'thumbnail': await MultipartFile.fromFile(
+            thumbnailPath,
+            filename: thumbnailPath.split(RegExp(r'[/\\]')).last,
+          ),
+        });
+      } else {
+        requestData = {
+          'title': title,
+          'category': category,
+        };
+      }
+
+      final response = await _apiClient.post(ApiEndpoints.live, data: requestData);
       if (response.statusCode == 201) {
         return LiveSession.fromMap(response.data);
       }

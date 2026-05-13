@@ -1,4 +1,5 @@
 class CartItem {
+  final String id;
   final String productId;
   final String productName;
   final String shopName;
@@ -7,6 +8,7 @@ class CartItem {
   final String? imagePlaceholder;
 
   CartItem({
+    required this.id,
     required this.productId,
     required this.productName,
     required this.shopName,
@@ -17,6 +19,7 @@ class CartItem {
 
   factory CartItem.fromMap(Map<String, dynamic> map) {
     return CartItem(
+      id: map['_id'] ?? map['id'] ?? '',
       productId: map['productId'] ?? '',
       productName: map['productName'] ?? '',
       shopName: map['shopName'] ?? '',

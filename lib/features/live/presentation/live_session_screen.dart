@@ -92,6 +92,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
           : ClientRoleType.clientRoleAudience,
     );
     await _engine!.enableVideo();
+    await _engine!.enableAudio();
     if (isBroadcaster) {
       await _engine!.startPreview();
     }
@@ -636,12 +637,18 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/seller');
+            onPressed: () async {
+              // End session in backend first
+              await ref
+                  .read(liveSessionRepositoryProvider)
+                  .endLiveSession(widget.session!.id);
+              if (mounted) {
+                Navigator.pop(context);
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/seller');
+                }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.liveRed),

@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Shop Near needs camera access to allow sellers to live stream products.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Shop Near needs microphone access to allow sellers to talk during live streams.</string>
 </dict>
 </plist>

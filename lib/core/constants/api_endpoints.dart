@@ -1,6 +1,9 @@
 class ApiEndpoints {
-  // static const String baseUrl = 'http://10.216.51.201:5000/api'; // Local IP for development
-  static const String baseUrl = 'https://shop-near.onrender.com/api'; // Production (Render)
+  // STEP 1: For Local Dev, use your laptop's IP (e.g. 192.168.1.15)
+  // static const String baseUrl = 'http://192.168.1.15:5000/api'; 
+  
+  // STEP 2: For Production, use your Render URL
+  static const String baseUrl = 'https://shop-near.onrender.com/api'; 
 
   static const String login = '/auth/login';
   static const String register = '/auth/register';

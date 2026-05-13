@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shop_near/features/auth/providers/auth_notifier.dart';
 import 'package:shop_near/shared/providers/dynamic_product_providers.dart';
+import 'package:dio/dio.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/repository_providers.dart';
@@ -143,9 +144,13 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
         context.pushReplacement('/home/live-session', extra: session);
       }
     } catch (e) {
+      String errorMsg = e.toString();
+      if (e is DioException) {
+        errorMsg = e.response?.data?['message'] ?? e.message ?? 'Network error';
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start live: ${e.toString()}')),
+          SnackBar(content: Text('Failed to start live: $errorMsg')),
         );
       }
     } finally {

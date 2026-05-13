@@ -32,6 +32,8 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _chatMessages = [];
+  bool _isMicMuted = false;
+  bool _isCameraOff = false;
   @override
   void initState() {
     super.initState();
@@ -39,92 +41,102 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
   }
 
   Future<void> _initAgora() async {
-    // retrieve permissions
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.microphone,
-      Permission.camera,
-    ].request();
+    try {
+      // 1. Create engine first so it's not null
+      _engine = createAgoraRtcEngine();
+      await _engine!.initialize(const RtcEngineContext(
+        appId: AgoraConfig.appId,
+        channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
+      ));
 
-    if (statuses[Permission.camera] != PermissionStatus.granted ||
-        statuses[Permission.microphone] != PermissionStatus.granted) {
+      // 2. Register handlers early
+      _engine!.registerEventHandler(
+        RtcEngineEventHandler(
+          onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+            debugPrint("local user ${connection.localUid} joined");
+            if (mounted) setState(() => _localUserJoined = true);
+          },
+          onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+            debugPrint("remote user $remoteUid joined");
+            // Set any remote UID as the broadcaster (since only the seller broadcasts)
+            if (mounted) {
+              setState(() => _remoteUid = remoteUid);
+              // Force unmute remote streams for this user
+              _engine?.muteRemoteAudioStream(uid: remoteUid, mute: false);
+              _engine?.muteRemoteVideoStream(uid: remoteUid, mute: false);
+            }
+          },
+          onUserOffline: (RtcConnection connection, int remoteUid,
+              UserOfflineReasonType reason) {
+            debugPrint("remote user $remoteUid left channel");
+            if (mounted) setState(() => _remoteUid = null);
+          },
+          onRemoteVideoStateChanged: (RtcConnection connection, int remoteUid, RemoteVideoState state, RemoteVideoStateReason reason, int elapsed) {
+            debugPrint("Remote video state changed: $state for $remoteUid");
+          },
+        ),
+      );
+
+      // 3. Request permissions
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.microphone,
+        Permission.camera,
+      ].request();
+
+      if (statuses[Permission.camera] != PermissionStatus.granted ||
+          statuses[Permission.microphone] != PermissionStatus.granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Camera and Microphone permissions are required')),
+          );
+        }
+        // Even if denied, we proceed to setup engine to avoid null errors, 
+        // but video won't show until user grants permission.
+      }
+
+      final user = ref.read(authControllerProvider).user;
+      // Identify as broadcaster if user is the session owner or has seller role
+      final isBroadcaster = user?.role == 'seller' || (user?.id != null && user?.id == widget.session?.sellerId);
+
+      await _engine!.setClientRole(
+        role: isBroadcaster
+            ? ClientRoleType.clientRoleBroadcaster
+            : ClientRoleType.clientRoleAudience,
+      );
+      await _engine!.enableVideo();
+      await _engine!.enableAudio();
+      
+      if (isBroadcaster) {
+        await _engine!.startPreview();
+      }
+
+      final sellerUid = 1;
+      await _engine!.joinChannel(
+        token: AgoraConfig.token,
+        channelId: widget.session?.id ?? 'demo_channel',
+        uid: isBroadcaster ? sellerUid : 0,
+        options: ChannelMediaOptions(
+          clientRoleType: isBroadcaster 
+              ? ClientRoleType.clientRoleBroadcaster 
+              : ClientRoleType.clientRoleAudience,
+          publishCameraTrack: isBroadcaster,
+          publishMicrophoneTrack: isBroadcaster,
+          autoSubscribeAudio: true,
+          autoSubscribeVideo: true,
+        ),
+      );
+      
+      if (mounted) setState(() => _isJoined = true);
+      _setupSocket();
+      
+    } catch (e) {
+      debugPrint("Agora Init Error: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Camera and Microphone permissions are required for Live Stream')),
+          SnackBar(content: Text('Failed to start live: $e')),
         );
       }
     }
-
-    //create the engine
-    _engine = createAgoraRtcEngine();
-    await _engine!.initialize(const RtcEngineContext(
-      appId: AgoraConfig.appId,
-      channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
-    ));
-
-    _engine!.registerEventHandler(
-      RtcEngineEventHandler(
-        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-          debugPrint("local user ${connection.localUid} joined");
-          if (mounted) setState(() => _localUserJoined = true);
-        },
-        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
-          debugPrint("remote user $remoteUid joined");
-          if (mounted) setState(() => _remoteUid = remoteUid);
-        },
-        onUserOffline: (RtcConnection connection, int remoteUid,
-            UserOfflineReasonType reason) {
-          debugPrint("remote user $remoteUid left channel");
-          if (mounted) setState(() => _remoteUid = null);
-        },
-        onTokenPrivilegeWillExpire: (RtcConnection connection, String token) {
-          debugPrint(
-              '[onTokenPrivilegeWillExpire] connection: ${connection.toJson()}, token: $token');
-        },
-      ),
-    );
-
-    final user = ref.read(authControllerProvider).user;
-    final isBroadcaster = user?.role == 'seller';
-
-    await _engine!.setClientRole(
-      role: isBroadcaster
-          ? ClientRoleType.clientRoleBroadcaster
-          : ClientRoleType.clientRoleAudience,
-    );
-    await _engine!.enableVideo();
-    await _engine!.enableAudio();
-    if (isBroadcaster) {
-      await _engine!.startPreview();
-    }
-
-    // Explicitly unmute for broadcaster
-    if (isBroadcaster) {
-      await _engine!.muteLocalAudioStream(false);
-      await _engine!.muteLocalVideoStream(false);
-    } else {
-      await _engine!.muteAllRemoteAudioStreams(false);
-      await _engine!.muteAllRemoteVideoStreams(false);
-    }
-
-    final sellerUid = 1;
-    await _engine!.joinChannel(
-      token: AgoraConfig.token,
-      channelId: widget.session?.id ?? 'demo_channel',
-      uid: isBroadcaster ? sellerUid : 0,
-      options: ChannelMediaOptions(
-        clientRoleType: isBroadcaster 
-            ? ClientRoleType.clientRoleBroadcaster 
-            : ClientRoleType.clientRoleAudience,
-        publishCameraTrack: isBroadcaster,
-        publishMicrophoneTrack: isBroadcaster,
-        autoSubscribeAudio: true,
-        autoSubscribeVideo: true,
-      ),
-    );
-    if (mounted) setState(() => _isJoined = true);
-
-    // Socket Interactions
-    _setupSocket();
   }
 
   void _setupSocket() {
@@ -245,16 +257,35 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
     final isBroadcaster = user?.role == 'seller';
 
     if (isBroadcaster) {
-      return AgoraVideoView(
-        controller: VideoViewController(
-          rtcEngine: _engine!,
-          canvas: const VideoCanvas(uid: 0), // local preview
-        ),
+      return Stack(
+        children: [
+          AgoraVideoView(
+            controller: VideoViewController(
+              rtcEngine: _engine!,
+              canvas: const VideoCanvas(uid: 0), // local preview
+            ),
+          ),
+          if (_isCameraOff)
+            Container(
+              color: Colors.black87,
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.videocam_off, color: Colors.white, size: 60),
+                    SizedBox(height: 10),
+                    Text('Camera is Off', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
+        ],
       );
     }
 
     if (_remoteUid != null) {
       return AgoraVideoView(
+        key: ValueKey('remote_video_$_remoteUid'),
         controller: VideoViewController.remote(
           rtcEngine: _engine!,
           canvas: VideoCanvas(uid: _remoteUid),
@@ -291,14 +322,22 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
     final user = ref.watch(authControllerProvider).user;
     final isOwner = user?.id == widget.session?.sellerId;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Real Video background
-          Positioned.fill(
-            child: _videoView(),
-          ),
+    return PopScope(
+      canPop: !isOwner, // Allow viewers to pop freely, but not the owner
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (isOwner) {
+          _showEndSessionDialog();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // Real Video background
+            Positioned.fill(
+              child: _videoView(),
+            ),
 
           // Floating Hearts Layer
           ..._floatingHearts,
@@ -372,16 +411,38 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                 if (isOwner)
                   Row(
                     children: [
-                      _buildHeaderCircle(Icons.flip_camera_ios, () => _engine?.switchCamera()),
+                      _buildHeaderCircle(
+                        Icons.flip_camera_ios, 
+                        () => _engine?.switchCamera(),
+                      ),
                       const SizedBox(width: 8),
-                      _buildHeaderCircle(Icons.mic, () => _engine?.muteLocalAudioStream(true)),
+                      _buildHeaderCircle(
+                        _isMicMuted ? Icons.mic_off : Icons.mic, 
+                        () async {
+                          await _engine?.muteLocalAudioStream(!_isMicMuted);
+                          setState(() => _isMicMuted = !_isMicMuted);
+                        },
+                        color: _isMicMuted ? AppColors.liveRed : Colors.black45,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildHeaderCircle(
+                        _isCameraOff ? Icons.videocam_off : Icons.videocam, 
+                        () async {
+                          await _engine?.muteLocalVideoStream(!_isCameraOff);
+                          setState(() => _isCameraOff = !_isCameraOff);
+                        },
+                        color: _isCameraOff ? AppColors.liveRed : Colors.black45,
+                      ),
                       const SizedBox(width: 8),
                     ],
                   ),
                 if (isOwner)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Text('🔴 STREAMING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(
+                      _localUserJoined ? '🔴 STREAMING' : '⌛ CONNECTING...', 
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)
+                    ),
                   )
                 else
                   const LiveBadge(pulse: true),
@@ -567,16 +628,17 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildHeaderCircle(IconData icon, VoidCallback onTap) {
+  Widget _buildHeaderCircle(IconData icon, VoidCallback onTap, {Color color = Colors.black45}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-            color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+            color: color, borderRadius: BorderRadius.circular(20)),
         child: Icon(icon, color: Colors.white, size: 20),
       ),
     );

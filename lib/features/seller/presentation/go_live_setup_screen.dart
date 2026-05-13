@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shop_near/features/auth/providers/auth_notifier.dart';
+import 'package:shop_near/shared/providers/dynamic_product_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/repository_providers.dart';
@@ -21,6 +23,11 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
   bool _isLoading = false;
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
+  bool _isVideoOn = true;
+  bool _isMicOn = true;
+  bool _isFrontCamera = true;
+  FlashMode _flashMode = FlashMode.off;
+  final Set<String> _pinnedProductIds = {};
 
   final List<String> _categories = [
     'Fashion & Clothing 👗',
@@ -36,28 +43,73 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
     _initializeCamera();
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _initializeCamera({CameraDescription? specificCamera}) async {
     final status = await Permission.camera.request();
-    if (status.isGranted) {
+    final micStatus = await Permission.microphone.request();
+    
+    if (status.isGranted && micStatus.isGranted) {
       final cameras = await availableCameras();
       if (cameras.isNotEmpty) {
+        final camera = specificCamera ?? cameras.firstWhere(
+          (cam) => cam.lensDirection == CameraLensDirection.front,
+          orElse: () => cameras.first,
+        );
+
         _cameraController = CameraController(
-          cameras.firstWhere(
-            (cam) => cam.lensDirection == CameraLensDirection.front,
-            orElse: () => cameras.first,
-          ),
+          camera,
           ResolutionPreset.medium,
+          enableAudio: true,
         );
 
         try {
           await _cameraController!.initialize();
           if (mounted) {
-            setState(() => _isCameraInitialized = true);
+            setState(() {
+              _isCameraInitialized = true;
+              _isFrontCamera = camera.lensDirection == CameraLensDirection.front;
+            });
           }
         } catch (e) {
           debugPrint('Camera init error: $e');
         }
       }
+    }
+  }
+
+  Future<void> _toggleCamera() async {
+    if (_cameraController == null) return;
+    final cameras = await availableCameras();
+    final newLensDirection = _isFrontCamera ? CameraLensDirection.back : CameraLensDirection.front;
+    final newCamera = cameras.firstWhere((cam) => cam.lensDirection == newLensDirection, orElse: () => cameras.first);
+    
+    await _cameraController?.dispose();
+    setState(() => _isCameraInitialized = false);
+    _initializeCamera(specificCamera: newCamera);
+  }
+
+  Future<void> _toggleVideo() async {
+    if (_cameraController == null) return;
+    if (_isVideoOn) {
+      await _cameraController!.pausePreview();
+    } else {
+      await _cameraController!.resumePreview();
+    }
+    setState(() => _isVideoOn = !_isVideoOn);
+  }
+
+  Future<void> _toggleMic() async {
+    // Note: Mic toggle usually happens at stream level, but we can set volume or re-init
+    setState(() => _isMicOn = !_isMicOn);
+  }
+
+  Future<void> _toggleFlash() async {
+    if (_cameraController == null) return;
+    final newMode = _flashMode == FlashMode.off ? FlashMode.torch : FlashMode.off;
+    try {
+      await _cameraController!.setFlashMode(newMode);
+      setState(() => _flashMode = newMode);
+    } catch (e) {
+      debugPrint('Flash error: $e');
     }
   }
 
@@ -80,8 +132,15 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
       // Invalidate the provider so the buyer panel updates
       ref.invalidate(liveSessionsProvider);
 
+      // IMPORTANT: Dispose the camera controller BEFORE navigating to LiveSessionScreen
+      // to release the hardware lock so Agora can take over.
+      if (_cameraController != null) {
+        await _cameraController!.dispose();
+        _cameraController = null;
+      }
+
       if (mounted) {
-        context.push('/home/live', extra: session);
+        context.pushReplacement('/home/live-session', extra: session);
       }
     } catch (e) {
       if (mounted) {
@@ -173,13 +232,29 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
             bottom: 16,
             child: Row(
               children: [
-                _buildCamCtrl(Icons.videocam_off),
+                _buildCamCtrl(
+                  _isVideoOn ? Icons.videocam : Icons.videocam_off, 
+                  onTap: _toggleVideo,
+                  isActive: _isVideoOn,
+                ),
                 const SizedBox(width: 16),
-                _buildCamCtrl(Icons.flip_camera_ios),
+                _buildCamCtrl(
+                  Icons.flip_camera_ios, 
+                  onTap: _toggleCamera,
+                  isActive: true,
+                ),
                 const SizedBox(width: 16),
-                _buildCamCtrl(Icons.mic),
+                _buildCamCtrl(
+                  _isMicOn ? Icons.mic : Icons.mic_off, 
+                  onTap: _toggleMic,
+                  isActive: _isMicOn,
+                ),
                 const SizedBox(width: 16),
-                _buildCamCtrl(Icons.lightbulb_outline),
+                _buildCamCtrl(
+                  _flashMode == FlashMode.torch ? Icons.lightbulb : Icons.lightbulb_outline, 
+                  onTap: _toggleFlash,
+                  isActive: _flashMode == FlashMode.torch,
+                ),
               ],
             ),
           ),
@@ -188,16 +263,19 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
     );
   }
 
-  Widget _buildCamCtrl(IconData icon) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.15),
-        border: Border.all(color: Colors.white.withOpacity(0.25)),
+  Widget _buildCamCtrl(IconData icon, {required VoidCallback onTap, bool isActive = true}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isActive ? AppColors.primary.withOpacity(0.8) : Colors.white.withOpacity(0.15),
+          border: Border.all(color: Colors.white.withOpacity(0.25)),
+        ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
-      child: Icon(icon, color: Colors.white, size: 18),
     );
   }
 
@@ -211,21 +289,19 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
           const SizedBox(height: 6),
           TextField(
             controller: _titleController,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.text),
+            style: const TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               hintText: 'e.g. New Saree Collection Launch 🌸',
               hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
               filled: true,
-              fillColor: AppColors.background,
+              fillColor: Colors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppColors.border, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.border, width: 1.5),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppColors.border, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.border, width: 1.5),
               ),
             ),
           ),
@@ -235,7 +311,7 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.border, width: 1.5),
             ),
@@ -261,38 +337,69 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
   }
 
   Widget _buildPinProducts() {
+    final user = ref.watch(authControllerProvider).user;
+    final productsAsync = ref.watch(sellerProductsProvider(user?.id ?? ''));
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Pin Products to Live Session',
-              style: AppTextStyles.labelLarge),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Pin Products to Live Session', style: AppTextStyles.labelLarge),
+              Text('${_pinnedProductIds.length} pinned', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary)),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 100,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildPinnedProduct('👗', 'Silk Saree', '₹1,299', true),
-              const SizedBox(width: 10),
-              _buildPinnedProduct('🧣', 'Dupatta', '₹850', true),
-              const SizedBox(width: 10),
-              _buildAddProductBtn(),
-            ],
+          height: 110,
+          child: productsAsync.when(
+            data: (products) => ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: products.length + 1,
+              itemBuilder: (context, index) {
+                if (index == products.length) return _buildAddProductBtn();
+                final product = products[index];
+                final isPinned = _pinnedProductIds.contains(product.id);
+                
+                return Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isPinned) {
+                          _pinnedProductIds.remove(product.id);
+                        } else {
+                          _pinnedProductIds.add(product.id);
+                        }
+                      });
+                    },
+                    child: _buildPinnedProduct(
+                      product.imagePlaceholder, 
+                      product.name, 
+                      '₹${product.price.toInt()}', 
+                      isPinned
+                    ),
+                  ),
+                );
+              },
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) => const Center(child: Text('Error loading products')),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPinnedProduct(
-      String icon, String name, String price, bool isPinned) {
+  Widget _buildPinnedProduct(String imageUrl, String name, String price, bool isPinned) {
     return Container(
       width: 90,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(14),
@@ -301,7 +408,13 @@ class _GoLiveSetupScreenState extends ConsumerState<GoLiveSetupScreen> {
       ),
       child: Column(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 24)),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(imageUrl, fit: BoxFit.cover, width: double.infinity),
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(name,
               style: AppTextStyles.labelSmall.copyWith(fontSize: 9),
               overflow: TextOverflow.ellipsis),

@@ -3,13 +3,30 @@ const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { upload } = require('../config/cloudinary');
+const Review = require('../models/Review');
+const Order = require('../models/Order');
 
 // Get current user profile
 router.get('/', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+
+    // Calculate dynamic counts
+    const reviewsCount = await Review.countDocuments({ user: req.user.id });
+    const wishlistCount = user.wishlist ? user.wishlist.length : 0;
+    const followingCount = user.following ? user.following.length : 0;
+    const ordersCount = await Order.countDocuments({ buyer: req.user.id });
+
+    // Merge counts into response
+    const userData = user.toObject();
+    userData.id = userData._id;
+    userData.reviewsCount = reviewsCount;
+    userData.wishlistCount = wishlistCount;
+    userData.followingCount = followingCount;
+    userData.ordersCount = ordersCount;
+
+    res.json(userData);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -33,9 +50,48 @@ router.put('/', auth, upload.single('avatar'), async (req, res) => {
     if (req.file) {
       updates.avatar = req.file.path;
     }
-    
-    const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
+
+    // Sanitize input
+    delete updates._id;
+    delete updates.id;
+    delete updates.email;
+    delete updates.password;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id, 
+      { $set: updates }, 
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     res.json(user);
+  } catch (err) {
+    console.error('Profile Update Error:', err);
+    res.status(500).json({ 
+      message: 'Failed to update profile', 
+      error: err.message 
+    });
+  }
+});
+
+// Get user wishlist products
+router.get('/wishlist', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate('wishlist');
+    res.json(user.wishlist || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get user reviews
+router.get('/reviews', auth, async (req, res) => {
+  try {
+    const reviews = await Review.find({ user: req.user.id }).populate('product');
+    res.json(reviews);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

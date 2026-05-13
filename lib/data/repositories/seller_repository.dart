@@ -21,9 +21,9 @@ class SellerRepository {
     }
   }
 
-  Future<Map<String, dynamic>> getAnalytics() async {
+  Future<Map<String, dynamic>> getAnalytics({String period = 'week'}) async {
     try {
-      final response = await _apiClient.get('/sellers/analytics');
+      final response = await _apiClient.get('/sellers/analytics', queryParameters: {'period': period});
       if (response.statusCode == 200) {
         return response.data;
       }

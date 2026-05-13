@@ -86,6 +86,7 @@ class ReelRepository {
       rethrow;
     }
   }
+
   Future<List<Reel>> getMyReels() async {
     try {
       final response = await _apiClient.get('${ApiEndpoints.reels}/seller/me');
@@ -101,7 +102,8 @@ class ReelRepository {
 
   Future<void> editReelCaption(String reelId, String newCaption) async {
     try {
-      await _apiClient.put('${ApiEndpoints.reels}/$reelId', data: {'caption': newCaption});
+      await _apiClient
+          .put('${ApiEndpoints.reels}/$reelId', data: {'caption': newCaption});
     } catch (e) {
       rethrow;
     }

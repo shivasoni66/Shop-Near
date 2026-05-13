@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/models/reel.dart';
+import 'package:go_router/go_router.dart';
 
 class CommunityPostCard extends StatefulWidget {
-  const CommunityPostCard({super.key});
+  final Reel reel;
+  const CommunityPostCard({super.key, required this.reel});
 
   @override
   State<CommunityPostCard> createState() => _CommunityPostCardState();
@@ -11,8 +14,14 @@ class CommunityPostCard extends StatefulWidget {
 
 class _CommunityPostCardState extends State<CommunityPostCard> {
   bool _isLiked = false;
-  int _likesCount = 234;
+  late int _likesCount;
   bool _isSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _likesCount = widget.reel.likes;
+  }
 
   void _toggleLike() {
     setState(() {
@@ -24,111 +33,115 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
             child: Row(
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [Color(0xFFFFECD2), Color(0xFFFCB69F)]),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text('👗', style: TextStyle(fontSize: 20)),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  child: Text(widget.reel.sellerName.isNotEmpty ? widget.reel.sellerName[0] : '👤', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Priya Fashion', style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w800)),
-                      Text('2 hours ago · Indore', style: AppTextStyles.labelSmall.copyWith(color: AppColors.muted)),
+                      Text(widget.reel.sellerName, style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w800)),
+                      Text('Featured Store ✨', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary.withOpacity(0.7), fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Following Priya Fashion! ✨')),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      border: Border.all(color: AppColors.border, width: 1.5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('Follow', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w700)),
-                  ),
-                ),
+                Icon(Icons.more_horiz_rounded, color: AppColors.muted.withOpacity(0.5)),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
             child: Text(
-              'New collection just arrived! Beautiful handwoven sarees from local weavers 🌸 #LocalLove #Handloom #IndoriStyle',
-              style: AppTextStyles.bodySmall,
+              widget.reel.description,
+              style: AppTextStyles.bodySmall.copyWith(height: 1.4),
             ),
           ),
-          Container(
-            height: 230,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFFFFECD2), Color(0xFFFCB69F)]),
+          GestureDetector(
+            onTap: () => context.push('/home/videos'),
+            child: Container(
+              height: 250,
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(colors: [Color(0xFF2B1B54), Color(0xFF1A1D2E)]),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(widget.reel.emoji ?? '🎬', style: const TextStyle(fontSize: 64)),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  const CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white24,
+                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40),
+                  ),
+                  Positioned(
+                    bottom: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
+                      child: const Text('WATCH REEL', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            alignment: Alignment.center,
-            child: const Text('🛍️', style: TextStyle(fontSize: 64)),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
                 _buildActionItem(
-                  icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                  icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                   count: _likesCount.toString(),
-                  color: _isLiked ? AppColors.primary : AppColors.muted,
+                  color: _isLiked ? AppColors.primary : AppColors.text,
                   onTap: _toggleLike,
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 18),
                 _buildActionItem(
-                  icon: Icons.chat_bubble_outline,
-                  count: '42',
-                  color: AppColors.muted,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Comment section opening... 💬')),
-                    );
-                  },
+                  icon: Icons.chat_bubble_outline_rounded,
+                  count: widget.reel.comments.toString(),
+                  color: AppColors.text,
+                  onTap: () => context.push('/home/videos'),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 18),
                 _buildActionItem(
-                  icon: Icons.share_outlined,
-                  count: '18',
-                  color: AppColors.muted,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Post link copied! 🔗')),
-                    );
-                  },
+                  icon: Icons.share_rounded,
+                  count: 'Share',
+                  color: AppColors.text,
+                  onTap: () {},
                 ),
                 const Spacer(),
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  icon: Icon(_isSaved ? Icons.bookmark : Icons.bookmark_border, color: _isSaved ? AppColors.secondary : AppColors.muted, size: 22),
+                  icon: Icon(_isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, color: _isSaved ? AppColors.secondary : AppColors.text, size: 24),
                   onPressed: () {
                     setState(() => _isSaved = !_isSaved);
                   },

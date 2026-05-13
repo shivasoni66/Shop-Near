@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../shared/providers/user_providers.dart';
+import '../../../shared/models/user.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -27,21 +28,64 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = ref.read(userProfileProvider).value;
-      if (user != null) {
-        _nameController.text = user.name;
-        _handleController.text = user.handle ?? '';
-        _locationController.text = user.location ?? '';
-        _bioController.text = user.bio ?? '';
-      }
+      _prefillData();
     });
   }
 
+  void _prefillData() {
+    final user = ref.read(userProfileProvider).value;
+    if (user != null) {
+      _nameController.text = user.name;
+      _handleController.text = user.handle ?? '';
+      _locationController.text = user.location ?? '';
+      _bioController.text = user.bio ?? '';
+    }
+  }
+
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
-    if (pickedFile != null) {
-      setState(() => _imageFile = File(pickedFile.path));
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Take a Photo', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                _getImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.secondary),
+              title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                _getImage(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _getImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
+      if (pickedFile != null) {
+        setState(() => _imageFile = File(pickedFile.path));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -76,7 +120,15 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(userProfileProvider).value;
+    final userAsync = ref.watch(userProfileProvider);
+    final user = userAsync.value;
+
+    // Listen for data changes to prefill if it was loading initially
+    ref.listen<AsyncValue<User>>(userProfileProvider, (previous, next) {
+      if (previous?.value == null && next.value != null) {
+        _prefillData();
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -153,20 +205,26 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.border, width: 1.5),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+            ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: TextField(
             controller: controller,
             maxLines: maxLines,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.text),
+            cursorColor: Colors.black,
+            style: const TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               icon: Icon(icon, color: AppColors.primary, size: 20),
               border: InputBorder.none,
               hintText: 'Enter $label',
-              hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.muted),
+              hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.muted.withOpacity(0.7)),
+              filled: true,
+              fillColor: Colors.white,
             ),
           ),
         ),

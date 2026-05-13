@@ -188,11 +188,17 @@ class _LiveExplorerScreenState extends ConsumerState<LiveExplorerScreen> {
                   ),
                 ),
               ),
-              // LIVE badge top-left
+              // LIVE/ENDED badge top-left
               Positioned(
                 top: 10,
                 left: 10,
-                child: const LiveBadge(),
+                child: session.isLive 
+                  ? const LiveBadge()
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.grey, borderRadius: BorderRadius.circular(6)),
+                      child: const Text('ENDED', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
               ),
               // Viewer count top-right
               Positioned(
@@ -266,14 +272,14 @@ class _LiveExplorerScreenState extends ConsumerState<LiveExplorerScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         alignment: Alignment.center,
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.play_arrow, color: Colors.white, size: 14),
-                            SizedBox(width: 4),
+                            Icon(session.isLive ? Icons.play_arrow : Icons.history, color: Colors.white, size: 14),
+                            const SizedBox(width: 4),
                             Text(
-                              'Join Live',
-                              style: TextStyle(
+                              session.isLive ? 'Join Live' : 'View Summary',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w900,

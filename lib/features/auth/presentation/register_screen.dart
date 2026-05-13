@@ -32,14 +32,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    await ref.read(authControllerProvider.notifier).register({
+    final authState = await ref.read(authControllerProvider.notifier).register({
       'name': name,
       'email': email,
       'password': password,
       'role': _role,
     });
 
-    final authState = ref.read(authControllerProvider);
+    if (!mounted) return;
     if (authState.status == AuthStatus.error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +65,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final isDesktop = size.width > 600;
 
     return Scaffold(
-      body: Container(
+      body: Stack(
+        children: [
+          Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
@@ -181,6 +183,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         ),
+      ),
+      if (isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            ),
+        ],
       ),
     );
   }

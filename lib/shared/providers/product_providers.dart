@@ -11,3 +11,13 @@ final productDetailProvider = FutureProvider.family<Product, String>((ref, id) a
   final repository = ref.watch(productRepositoryProvider);
   return await repository.getProductById(id);
 });
+
+final categoryProductsProvider = FutureProvider.family<List<Product>, String>((ref, category) async {
+  final repository = ref.watch(productRepositoryProvider);
+  return await repository.getAllProducts(category: category);
+});
+
+final searchProductsProvider = FutureProvider.family<List<Product>, String>((ref, query) async {
+  final repository = ref.watch(productRepositoryProvider);
+  return await repository.getAllProducts(query: query);
+});

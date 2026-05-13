@@ -13,6 +13,8 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  points: { type: Number, default: 0 },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -94,3 +94,8 @@ final sellerReelsProvider = FutureProvider.autoDispose<List<Reel>>((ref) async {
   final repository = ref.watch(reelRepositoryProvider);
   return await repository.getMyReels();
 });
+
+final reelCommentsProvider = FutureProvider.family<List<dynamic>, String>((ref, reelId) async {
+  final repository = ref.watch(reelRepositoryProvider);
+  return await repository.getReelComments(reelId);
+});

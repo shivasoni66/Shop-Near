@@ -24,23 +24,23 @@ class SellerAnalyticsScreen extends ConsumerWidget {
         ],
       ),
       body: analyticsAsync.when(
-        data: (analytics) => _buildContent(context, analytics),
+        data: (analytics) => _buildContent(context, ref, analytics),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, Map<String, dynamic> analytics) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, Map<String, dynamic> analytics) {
     return SingleChildScrollView(
       child: Column(
         children: [
-          _buildPeriodSelector(),
+          _buildPeriodSelector(ref),
           _buildSummaryGrid(analytics),
-          const SectionHeader(title: '📈 Sales Trend'),
-          _buildSalesChart(),
+          const SectionHeader(title: '📈 Revenue Trend'),
+          _buildSalesChart(analytics['dailyRevenue'] ?? []),
           const SectionHeader(title: '🏆 Top Selling Products'),
-          _buildTopProducts(),
+          _buildTopProducts(analytics['topProducts'] ?? []),
           const SectionHeader(title: '📡 Live Session Stats'),
           _buildLiveStats(),
           const SizedBox(height: 20),
@@ -49,23 +49,28 @@ class SellerAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPeriodSelector() {
+  Widget _buildPeriodSelector(WidgetRef ref) {
+    final currentPeriod = ref.watch(selectedAnalyticsPeriodProvider);
+    
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: ['Week', 'Month', 'Year'].map((p) => Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: p == 'Month' ? AppColors.primary : AppColors.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: p == 'Month' ? AppColors.primary : AppColors.border),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              p,
-              style: AppTextStyles.labelMedium.copyWith(color: p == 'Month' ? Colors.white : AppColors.text),
+          child: GestureDetector(
+            onTap: () => ref.read(selectedAnalyticsPeriodProvider.notifier).state = p,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: p == currentPeriod ? AppColors.primary : AppColors.card,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: p == currentPeriod ? AppColors.primary : AppColors.border),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                p,
+                style: AppTextStyles.labelMedium.copyWith(color: p == currentPeriod ? Colors.white : AppColors.text),
+              ),
             ),
           ),
         )).toList(),
@@ -74,10 +79,10 @@ class SellerAnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _buildSummaryGrid(Map<String, dynamic> analytics) {
-    final totalSales = analytics['totalSales']?.toString() ?? '₹0';
-    final ordersCount = analytics['ordersCount']?.toString() ?? '0';
+    final totalSales = '₹${analytics['totalRevenue'] ?? 0}';
+    final ordersCount = analytics['totalOrders']?.toString() ?? '0';
     final conversionRate = analytics['conversionRate']?.toString() ?? '0%';
-    final avgOrderValue = analytics['avgOrderValue']?.toString() ?? '₹0';
+    final avgOrderValue = '₹${analytics['avgOrderValue'] ?? 0}';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -131,36 +136,79 @@ class SellerAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSalesChart() {
+  Widget _buildSalesChart(List<dynamic> dailyData) {
+    if (dailyData.isEmpty) {
+      return const Center(child: Text('No sales data yet'));
+    }
+
+    final maxVal = dailyData.map((e) => (e['amount'] as num).toDouble()).reduce((a, b) => a > b ? a : b);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      height: 180,
+      height: 200,
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
       padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(12, (index) {
-          final h = 0.2 + (0.7 * (index % 5) / 5);
-          return Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              height: 150 * h,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(index == 10 ? 1 : 0.4),
-                borderRadius: BorderRadius.circular(4),
-              ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: dailyData.map((data) {
+                final amount = (data['amount'] as num).toDouble();
+                final h = maxVal > 0 ? (amount / maxVal) : 0.05;
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text('₹${amount.toInt()}', style: const TextStyle(fontSize: 8, color: AppColors.muted)),
+                      const SizedBox(height: 4),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        height: 120 * h.clamp(0.05, 1.0),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [AppColors.primary, AppColors.primary.withOpacity(0.3)],
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
-          );
-        }),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: dailyData.map((data) => Expanded(
+              child: Text(
+                data['day'].toString(),
+                textAlign: TextAlign.center,
+                style: AppTextStyles.labelSmall.copyWith(fontSize: 10),
+              ),
+            )).toList(),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTopProducts() {
+  Widget _buildTopProducts(List<dynamic> topProducts) {
+    if (topProducts.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
+        child: const Center(child: Text('No sales yet 🏆')),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(14),
@@ -170,18 +218,29 @@ class SellerAnalyticsScreen extends ConsumerWidget {
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
-        children: [
-          _buildTopProductItem('1', '👗', 'Silk Saree Blue', '62 sold', '₹80,538', const Color(0xFFFEF3C7), const Color(0xFF92400E)),
-          const Divider(color: AppColors.border),
-          _buildTopProductItem('2', '👘', 'Cotton Kurti Set', '45 sold', '₹31,455', const Color(0xFFDBEAFE), const Color(0xFF1E40AF)),
-          const Divider(color: AppColors.border),
-          _buildTopProductItem('3', '🧣', 'Banarasi Dupatta', '28 sold', '₹23,800', const Color(0xFFDCFCE7), const Color(0xFF166534)),
-        ],
+        children: topProducts.asMap().entries.map((entry) {
+          final index = entry.key;
+          final product = entry.value;
+          return Column(
+            children: [
+              _buildTopProductItem(
+                (index + 1).toString(), 
+                product['image'], 
+                product['name'], 
+                '${product['sold']} sold', 
+                '₹${product['revenue']}', 
+                index == 0 ? const Color(0xFFFEF3C7) : index == 1 ? const Color(0xFFDBEAFE) : const Color(0xFFDCFCE7), 
+                index == 0 ? const Color(0xFF92400E) : index == 1 ? const Color(0xFF1E40AF) : const Color(0xFF166534)
+              ),
+              if (index < topProducts.length - 1) const Divider(color: AppColors.border),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildTopProductItem(String rank, String emoji, String name, String sold, String rev, Color rankBg, Color rankText) {
+  Widget _buildTopProductItem(String rank, String imageUrl, String name, String sold, String rev, Color rankBg, Color rankText) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -197,9 +256,13 @@ class SellerAnalyticsScreen extends ConsumerWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: AppColors.background, 
+              borderRadius: BorderRadius.circular(10),
+              image: imageUrl.isNotEmpty ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover) : null,
+            ),
             alignment: Alignment.center,
-            child: Text(emoji, style: const TextStyle(fontSize: 20)),
+            child: imageUrl.isEmpty ? const Text('📦') : null,
           ),
           const SizedBox(width: 10),
           Expanded(

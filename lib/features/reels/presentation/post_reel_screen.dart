@@ -27,9 +27,22 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
   final TextEditingController _captionController = TextEditingController();
   bool _isUploading = false;
 
-  Future<void> _pickVideo() async {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final source = GoRouterState.of(context).uri.queryParameters['source'];
+      if (source == 'camera') {
+        _pickVideo(ImageSource.camera);
+      } else if (source == 'gallery') {
+        _pickVideo(ImageSource.gallery);
+      }
+    });
+  }
+
+  Future<void> _pickVideo([ImageSource source = ImageSource.gallery]) async {
     try {
-      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+      final XFile? video = await _picker.pickVideo(source: source);
       if (video != null) {
         setState(() {
           _selectedVideo = video;
@@ -74,6 +87,8 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
 
     try {
       final repository = ref.read(reelRepositoryProvider);
+      
+      // We use the same robust logic as product uploads
       await repository.uploadReel(_selectedVideo!, _captionController.text.trim());
 
       await ref.read(reelsProvider.notifier).refresh();
@@ -139,7 +154,7 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
                 ),
                 child: _selectedVideo == null
                     ? InkWell(
-                        onTap: _pickVideo,
+                        onTap: () => _pickVideo(ImageSource.gallery),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -164,7 +179,7 @@ class _PostReelScreenState extends ConsumerState<PostReelScreen> {
                               right: 10,
                               child: IconButton(
                                 icon: const Icon(Icons.change_circle, color: Colors.white, size: 32),
-                                onPressed: _pickVideo,
+                                onPressed: () => _pickVideo(ImageSource.gallery),
                               ),
                             ),
                           ],

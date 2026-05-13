@@ -91,11 +91,11 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
                 labelColor: AppColors.primary,
                 unselectedLabelColor: AppColors.muted,
                 labelStyle: AppTextStyles.labelMedium,
-                tabs: const [
-                  Tab(text: 'All (12)'),
-                  Tab(text: 'Active (9)'),
-                  Tab(text: 'Draft (2)'),
-                  Tab(text: 'Out of Stock (1)'),
+                tabs: [
+                  Tab(text: 'All (${productsAsync.value?.length ?? 0})'),
+                  Tab(text: 'Active (${productsAsync.value?.where((p) => p.stock > 0).length ?? 0})'),
+                  Tab(text: 'Draft (0)'),
+                  Tab(text: 'Out of Stock (${productsAsync.value?.where((p) => p.stock == 0).length ?? 0})'),
                 ],
               ),
             ],
@@ -108,9 +108,9 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
             controller: _tabController,
             children: [
               _buildProductList(products),
-              _buildProductList(products), // In real app, filter these
-              _buildProductList(products),
-              _buildProductList(products),
+              _buildProductList(products.where((p) => p.stock > 0).toList()),
+              _buildProductList(products.where((p) => false).toList()), // Draft placeholder
+              _buildProductList(products.where((p) => p.stock == 0).toList()),
             ],
           );
         },
@@ -129,8 +129,9 @@ class _SellerProductsScreenState extends ConsumerState<SellerProductsScreen> wit
         return _buildProductItem(
           product.imagePlaceholder,
           product.name,
-          'Stock: ${product.stockCount} · ⭐ ${product.rating}',
+          'Stock: ${product.stock} · Sold: ${product.soldCount} · ⭐ ${product.rating}',
           '₹${product.price}',
+          isOutOfStock: product.stock == 0,
         );
       },
     );

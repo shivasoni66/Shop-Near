@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../shared/models/product.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/providers/seller_providers.dart';
 
 enum ProductStatus { initial, loading, loaded, error, creating, created }
 
@@ -48,6 +49,8 @@ class ProductNotifier extends StateNotifier<ProductState> {
     state = ProductState.creating(currentProducts);
     try {
       final newProduct = await _ref.read(productRepositoryProvider).createProduct(data, imagePaths);
+      _ref.invalidate(sellerProductsProvider);
+      _ref.invalidate(sellerAnalyticsProvider);
       state = ProductState.created([newProduct, ...currentProducts]);
     } on DioException catch (e) {
       state = ProductState.error(_handleDioError(e));

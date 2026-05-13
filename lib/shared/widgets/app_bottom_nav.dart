@@ -21,7 +21,7 @@ class AppBottomNav extends StatelessWidget {
           _buildNavItem(context, 'Home', Icons.home_filled, Icons.home_outlined, '/home'),
           _buildNavItem(context, 'Videos', Icons.video_collection, Icons.video_collection_outlined, '/home/videos'),
           _buildLiveNavBtn(context),
-          _buildNavItem(context, 'Messages', Icons.chat_bubble, Icons.chat_bubble_outline, '/home/chat'),
+          _buildNavItem(context, 'Cart', Icons.shopping_cart, Icons.shopping_cart_outlined, '/home/cart'),
           _buildNavItem(context, 'Profile', Icons.person, Icons.person_outline, '/home/profile'),
         ],
       ),

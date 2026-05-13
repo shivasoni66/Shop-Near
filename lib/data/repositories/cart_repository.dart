@@ -22,7 +22,32 @@ class CartRepository {
 
   Future<void> addToCart(String productId, int quantity) async {
     try {
-      await _apiClient.post('/cart', data: {'productId': productId, 'quantity': quantity});
+      await _apiClient
+          .post('/cart', data: {'productId': productId, 'quantity': quantity});
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateQuantity(String itemId, int quantity) async {
+    try {
+      await _apiClient.put('/cart/$itemId', data: {'quantity': quantity});
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> removeFromCart(String itemId) async {
+    try {
+      await _apiClient.delete('/cart/$itemId');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> clearCart() async {
+    try {
+      await _apiClient.delete('/cart');
     } catch (e) {
       rethrow;
     }

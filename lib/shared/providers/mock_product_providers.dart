@@ -51,22 +51,33 @@ final mockProductDetailProvider = FutureProvider.family<Product, String>((ref, i
         soldCount: 45,
       );
     default:
-      // Return a default product for any other ID
+      // Return a dynamic product based on ID to ensure uniqueness
+      final idHash = id.hashCode.abs();
+      final productNames = ['Designer Ethnic Wear', 'Royal Party Set', 'Modern Festive Look', 'Artisan Handcrafted', 'Premium Collection'];
+      final categories = ['Sarees', 'Kurtis', 'Lehengas', 'Fusion', 'Accessories'];
+      final basePrices = [1499.0, 1999.0, 2499.0, 3999.0, 999.0];
+      
+      final nameIndex = idHash % productNames.length;
+      final categoryIndex = idHash % categories.length;
+      final priceIndex = idHash % basePrices.length;
+      
       return Product(
         id: id,
-        name: 'Premium Ethnic Wear',
-        description: 'High-quality ethnic wear perfect for any occasion. Made with premium fabrics and traditional craftsmanship.',
-        price: 1999.99,
-        oldPrice: 2499.99,
-        category: 'ethnic',
-        imagePlaceholder: '🌸',
-        shopName: 'Ethnic Fashion Store',
-        rating: 4.6,
-        reviewsCount: 156,
-        soldCount: 234,
+        name: '${productNames[nameIndex]} ${id.substring(0, min(id.length, 3)).toUpperCase()}',
+        description: 'High-quality ${categories[categoryIndex].toLowerCase()} perfect for any occasion. Made with premium fabrics and traditional craftsmanship. Experience the blend of style and comfort.',
+        price: basePrices[priceIndex],
+        oldPrice: basePrices[priceIndex] * 1.4,
+        category: categories[categoryIndex].toLowerCase(),
+        imagePlaceholder: '📦', // Will be replaced by dynamic emoji in dynamic provider
+        shopName: 'Shop ${id.substring(0, min(id.length, 4)).toUpperCase()}',
+        rating: 4.0 + (idHash % 10) / 10.0,
+        reviewsCount: 10 + (idHash % 500),
+        soldCount: 5 + (idHash % 100),
       );
   }
 });
+
+int min(int a, int b) => a < b ? a : b;
 
 // Enhanced product model with additional shopping platform features
 class EnhancedProduct {

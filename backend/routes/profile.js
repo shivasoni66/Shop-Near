@@ -81,12 +81,24 @@ router.put('/', auth, upload.single('avatar'), async (req, res) => {
 // Get user wishlist products
 router.get('/wishlist', auth, async (req, res) => {
   try {
+    console.log(`Fetching wishlist for user: ${req.user.id}`);
     const user = await User.findById(req.user.id).populate('wishlist');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user.wishlist || []);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Filter out any products that might have been deleted but are still in wishlist array
+    const validWishlist = (user.wishlist || []).filter(item => item != null);
+    
+    console.log(`Found ${validWishlist.length} valid items in wishlist`);
+    res.json(validWishlist);
   } catch (err) {
-    console.error('Wishlist Error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('CRITICAL: Wishlist Fetch Error:', err);
+    res.status(500).json({ 
+      message: 'Server error while fetching wishlist',
+      error: err.message 
+    });
   }
 });
 

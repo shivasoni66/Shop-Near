@@ -6,13 +6,14 @@ const auth = require('../middleware/auth');
 // Place order
 router.post('/', auth, async (req, res) => {
   try {
-    const { productId, sellerId, amount, paymentMethod } = req.body;
+    const { productId, sellerId, amount, paymentMethod, address } = req.body;
     const order = new Order({
       product: productId,
       buyer: req.user.id,
       seller: sellerId,
       amount,
-      paymentMethod
+      paymentMethod,
+      address
     });
     await order.save();
     

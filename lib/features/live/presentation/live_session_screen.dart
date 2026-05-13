@@ -294,7 +294,9 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
               children: [
                 GestureDetector(
                   onTap: () {
-                    if (context.canPop()) {
+                    if (isOwner) {
+                      _showEndSessionDialog();
+                    } else if (context.canPop()) {
                       context.pop();
                     } else {
                       context.go('/home');
@@ -303,10 +305,10 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: Colors.black45,
+                        color: isOwner ? AppColors.liveRed : Colors.black45,
                         borderRadius: BorderRadius.circular(20)),
                     child:
-                        const Icon(Icons.close, color: Colors.white, size: 20),
+                        Icon(isOwner ? Icons.stop : Icons.close, color: Colors.white, size: 20),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -358,26 +360,32 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                       const SizedBox(width: 8),
                     ],
                   ),
-                const LiveBadge(pulse: true),
+                if (isOwner)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: Text('🔴 STREAMING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)),
+                  )
+                else
+                  const LiveBadge(pulse: true),
               ],
             ),
           ),
 
           // Reactions Side
-          Positioned(
-            right: 14,
-            bottom: 250,
-            child: Column(
-              children: [
-                _buildReactBtn('❤️'),
-                const SizedBox(height: 10),
-                _buildReactBtn('🔥'),
-                const SizedBox(height: 10),
-                _buildReactBtn('👏'),
-                const SizedBox(height: 10),
-                _buildReactBtn('😍'),
-                const SizedBox(height: 10),
-                if (!isOwner)
+          if (!isOwner)
+            Positioned(
+              right: 14,
+              bottom: 250,
+              child: Column(
+                children: [
+                  _buildReactBtn('❤️'),
+                  const SizedBox(height: 10),
+                  _buildReactBtn('🔥'),
+                  const SizedBox(height: 10),
+                  _buildReactBtn('👏'),
+                  const SizedBox(height: 10),
+                  _buildReactBtn('😍'),
+                  const SizedBox(height: 10),
                   GestureDetector(
                     onTap: () => context.push('/home/cart'),
                     child: Container(
@@ -393,9 +401,9 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                           color: Colors.white, size: 20),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
 
           // Chat Area
           Positioned(
@@ -484,8 +492,9 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
           ),
 
           // Live Input Area
-          Positioned(
-            bottom: 0,
+          if (!isOwner)
+            Positioned(
+              bottom: 0,
             left: 0,
             right: 0,
             child: Container(
@@ -595,6 +604,33 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
                     fontWeight: FontWeight.normal)),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showEndSessionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('End Live Session?'),
+        content: const Text('This will stop the stream for all viewers.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/seller');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.liveRed),
+            child: const Text('End Now'),
+          ),
+        ],
       ),
     );
   }

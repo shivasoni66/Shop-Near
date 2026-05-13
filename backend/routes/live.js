@@ -4,16 +4,11 @@ const LiveSession = require('../models/LiveSession');
 const auth = require('../middleware/auth');
 const { upload } = require('../config/cloudinary');
 
-// Get all live sessions (Real-time filtering for history)
+// Get all live sessions (Only active ones)
 router.get('/', async (req, res) => {
   try {
-    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-    const sessions = await LiveSession.find({
-      $or: [
-        { isLive: true },
-        { isLive: false, endedAt: { $gte: twoMinutesAgo } }
-      ]
-    }).populate('seller', 'name avatar');
+    const sessions = await LiveSession.find({ isLive: true })
+      .populate('seller', 'name avatar');
     res.json(sessions);
   } catch (err) {
     res.status(500).json({ error: err.message });

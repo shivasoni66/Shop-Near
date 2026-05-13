@@ -89,10 +89,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen>
       await _engine!.startPreview();
     }
 
+    final sellerUid = 1;
     await _engine!.joinChannel(
       token: AgoraConfig.token,
       channelId: widget.session?.id ?? 'demo_channel',
-      uid: isBroadcaster ? 1 : 0, // Seller is always UID 1
+      uid: isBroadcaster ? sellerUid : 0,
       options: ChannelMediaOptions(
         clientRoleType: isBroadcaster 
             ? ClientRoleType.clientRoleBroadcaster 

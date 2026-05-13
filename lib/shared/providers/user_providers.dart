@@ -22,12 +22,31 @@ final userOrdersProvider = FutureProvider((ref) {
   return repository.getBuyerOrders();
 });
 
-final userWishlistProvider = FutureProvider((ref) async {
-  ref.watch(authControllerProvider);
-  final apiClient = ref.watch(apiClientProvider);
-  final response = await apiClient.get('/profile/wishlist');
-  return (response.data as List).map((p) => Product.fromMap(p)).toList();
+final userWishlistProvider = AsyncNotifierProvider<WishlistNotifier, List<Product>>(() {
+  return WishlistNotifier();
 });
+
+class WishlistNotifier extends AsyncNotifier<List<Product>> {
+  @override
+  Future<List<Product>> build() async {
+    final repository = ref.watch(userRepositoryProvider);
+    return await repository.getWishlist();
+  }
+
+  Future<void> toggle(String productId) async {
+    final repository = ref.read(userRepositoryProvider);
+    final isAdded = await repository.toggleWishlist(productId);
+    
+    // Refresh the list from the server to ensure consistency
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => repository.getWishlist());
+  }
+
+  bool isWishlisted(String productId) {
+    if (state.asData == null) return false;
+    return state.asData!.value.any((p) => p.id == productId);
+  }
+}
 
 final userReviewsProvider = FutureProvider((ref) async {
   ref.watch(authControllerProvider);

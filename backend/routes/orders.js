@@ -16,10 +16,16 @@ router.post('/', auth, async (req, res) => {
     });
     await order.save();
     
+    // Populate for response
+    const populatedOrder = await Order.findById(order._id)
+      .populate('product')
+      .populate('buyer', 'name location')
+      .populate('seller', 'name');
+
     // Notify seller via Socket.IO
-    req.io.emit(`new_order_${sellerId}`, order); 
+    req.io.emit(`new_order_${sellerId}`, populatedOrder); 
     
-    res.status(201).json(order);
+    res.status(201).json(populatedOrder);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

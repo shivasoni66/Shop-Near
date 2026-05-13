@@ -126,4 +126,30 @@ router.get('/orders', auth, async (req, res) => {
   }
 });
 
+// Toggle wishlist
+router.post('/wishlist/toggle', auth, async (req, res) => {
+  try {
+    const { productId } = req.body;
+    const user = await User.findById(req.user.id);
+    
+    if (!user.wishlist) user.wishlist = [];
+    
+    const index = user.wishlist.indexOf(productId);
+    let isWishlisted = false;
+    
+    if (index === -1) {
+      user.wishlist.push(productId);
+      isWishlisted = true;
+    } else {
+      user.wishlist.splice(index, 1);
+      isWishlisted = false;
+    }
+    
+    await user.save();
+    res.json({ isWishlisted, count: user.wishlist.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
